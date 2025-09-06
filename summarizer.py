@@ -6,10 +6,13 @@ from openai import OpenAI
 
 load_dotenv()
 client = OpenAI()
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
+}
 
 def extract_text_from_url(url):
     try:
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, headers=headers, timeout=100)
         response.raise_for_status()
     except Exception as e:
         print(f"❌ Error fetching the URL: {e}")
@@ -63,7 +66,7 @@ def main():
                 print("❌ GPT could not generate a summary.")
         
         while True:
-            again = input("\n🔁 Summarize another article? (y/n): ").strip().lower()
+            again = input("\n🔁 Summarize another webpage? (y/n): ").strip().lower()
             if again == 'y':
                 break 
             elif again == 'n':
