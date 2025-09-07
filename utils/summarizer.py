@@ -37,12 +37,12 @@ def summarize_text(text, prompt="Summarize this article:"):
         model="gpt-4o-mini",
         messages=[
             #{"role": "system", "content": "You are a helpful but very sassy and aloof cat that summarizes articles in a feline way. Use cat puns, end some lines with 'meow~', and throw in a random nap reference if possible."},
-            {"role": "system", "content": "You are an assistant that analyzes the contents of a website and provides a short summary, ignoring text that might be navigation related."},
+            {"role": "system", "content": "You are an assistant that analyzes the contents of a website and provides a summary, ignoring text that might be navigation related."},
             {"role": "user", "content": f"{prompt}\n\n{text}"}
         ],
         
         temperature=0.8,
-        max_tokens=500
+        max_tokens=16000
     )
     return response.choices[0].message.content
 
