@@ -3,6 +3,9 @@ from utils.summarizer import extract_text_from_url, summarize_text
 from utils.text_io import extract_text_from_bytes
 import pandas as pd
 import time
+import os
+from io import BytesIO
+import zipfile
 
 #Session States
 
@@ -133,8 +136,40 @@ def _summarize_files(files, progress_bar):
 
     st.session_state.busy_file = False
 
+def _display_website_summary():
+    st.subheader("📝 Website Summary")
+    st.write(st.session_state.results_website_summary)
+    st.download_button(
+    "⬇️ Download Website Summary",
+    (st.session_state.results_website_summary or "").encode("utf-8"),
+    file_name=f"website_summary.txt",
+    use_container_width=True,
+    key=f"dl_website_summary",
+    )
+
 def _display_summary_df():
-    st.subheader("📝 All Summary Files")
+
+    summary_header_col1, summary_header_col2 = st.columns([0.50,0.50    ])
+
+    with summary_header_col1:
+        st.subheader("📝 All Summary Files")
+
+    with summary_header_col2:
+        mem_zip = BytesIO()
+        with zipfile.ZipFile(mem_zip, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+            for r in st.session_state.results_df.itertuples(index=False):
+                filename, ext = os.path.splitext(getattr(r, "file"))
+                safe = filename.replace("/", "_")
+                zf.writestr(f"{safe}__summary.txt", getattr(r, "summary"))
+            if st.session_state.results_master_summary:
+                zf.writestr("MASTER_SUMMARY.txt", st.session_state.results_master_summary)
+        mem_zip.seek(0)
+        st.download_button("⬇️ Download all summaries (ZIP📦)", 
+                        data=mem_zip, 
+                        file_name="summaries.zip", 
+                        mime="application/zip",
+                        use_container_width=True,)
+
     left, right = st.columns([0.12, 0.88])
     with left:
         st.markdown("**✅ Select**")
@@ -161,15 +196,29 @@ def _display_summary_df():
     # 3) Show expander if we have a selected index
     if st.session_state.sel_idx is not None and 0 <= st.session_state.sel_idx < len(st.session_state.results_df):
         row = st.session_state.results_df.iloc[st.session_state.sel_idx]
-
+        filename, ext = os.path.splitext(row["file"])
         with st.expander(f"Summary — {row['file']}", expanded=True):
             st.write(row["summary"])
+            st.download_button(
+            "⬇️ Download Summary",
+            (row["summary"] or "").encode("utf-8"),
+            file_name=f"{filename}_summary.txt",
+            use_container_width=True,
+            key=f"dl_{filename}_summary",
+    )
     else:
         st.info("Click a row to view its full summary.")
 
 def _display_master_summary():
     st.subheader("📝 Overall Summary")
     st.write(st.session_state.results_master_summary)
+    st.download_button(
+    "⬇️ Download Overall Summary",
+    (st.session_state.results_master_summary or "").encode("utf-8"),
+    file_name=f"OVERALL_SUMMARY.txt",
+    use_container_width=True,
+    key=f"dl_overall_summary",
+    )
 
 
 # UI interface
@@ -266,8 +315,7 @@ with st.container(horizontal_alignment="center"):
                 if has_website_summary:
                     (tab_web,) = st.tabs(["Website Summary"])
                     with tab_web:
-                        st.subheader("📝 Website Summary")
-                        st.write(st.session_state.results_website_summary)
+                        _display_website_summary()
                 elif has_individual and has_master:
                     tab_individual, tab_master = st.tabs(["Individual Summaries", "Overall Summary"])
                     with tab_individual:
