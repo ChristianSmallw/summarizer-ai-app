@@ -1,11 +1,11 @@
 import os
 import requests
 from bs4 import BeautifulSoup
-from dotenv import load_dotenv
 from openai import OpenAI
+from utils.config import get_secret
 
-load_dotenv()
-client = OpenAI()
+OPENAI_API_KEY = get_secret("OPENAI_API_KEY")
+client = OpenAI(api_key=OPENAI_API_KEY)
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
 }
