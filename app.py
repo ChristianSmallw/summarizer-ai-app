@@ -42,7 +42,7 @@ def _length_instr(choice: str) -> str:
     if choice.startswith("Medium"): return "1–2 paragraphs"
     return "a detailed"
 
-def _summarize_website(url: str) -> str:
+def _summarize_website(url: str, length: str) -> str:
     st.session_state.running = True
     st.session_state.sel_idx = None
     st.session_state.results_df = pd.DataFrame()
@@ -58,7 +58,7 @@ def _summarize_website(url: str) -> str:
             return summarize_text(article_text, prompt=prompt)
     
 
-def _summarize_files(files, progress_bar):
+def _summarize_files(files, progress_bar, length):
 
     file_count = len(files)
     files_data = []
@@ -133,8 +133,6 @@ def _summarize_files(files, progress_bar):
 
     if st.session_state.enable_individual:
         st.session_state.results_df = pd.DataFrame(files_data)
-
-    st.session_state.busy_file = False
 
 def _display_website_summary():
     st.subheader("📝 Website Summary")
@@ -245,10 +243,10 @@ with st.container(horizontal_alignment="center"):
                                     disabled=_busy())
             file_count = len(files)
 
-            length = st.selectbox(
+            file_summary_length = st.selectbox(
             "Select summary length:",
             ["Short (2-3 sentences)", "Medium (1-2 paragraphs)", "Detailed (longer summary)"], 
-            key="summary_length_files",
+            key="file_summary_length",
             disabled=_busy()
             )
 
@@ -286,10 +284,10 @@ with st.container(horizontal_alignment="center"):
 
         with url_tab:
             url = st.text_input(label="Enter URL:", disabled=_busy())
-            length = st.selectbox(
+            url_summary_length = st.selectbox(
             "Select summary length:",
             ["Short (2-3 sentences)", "Medium (1-2 paragraphs)", "Detailed (longer summary)"], 
-            key="summary_length_url",
+            key="url_summary_length",
             disabled=_busy()
             )
             url_summarize_btn = st.button("Summarize Website", disabled=_busy())
@@ -299,7 +297,7 @@ with st.container(horizontal_alignment="center"):
                 st.session_state.busy_web = True
                 st.rerun()
             elif st.session_state.busy_web:
-                st.session_state.results_website_summary = _summarize_website(url)
+                st.session_state.results_website_summary = _summarize_website(url, url_summary_length)
                 st.rerun()
 
     with col_main2:
@@ -339,5 +337,11 @@ with st.container(horizontal_alignment="center"):
 
 
 if st.session_state.busy_file:
-    _summarize_files(files, progress_bar)
-    st.rerun()
+    with file_tab:
+        try:
+            _summarize_files(files, progress_bar, file_summary_length)
+        except Exception as e:
+            st.error(f"failed while summarizing files: {e}")
+        finally:
+            st.session_state.busy_file = False
+            st.rerun()
