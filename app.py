@@ -42,7 +42,40 @@ def _length_instr(choice: str) -> str:
     """Function to determine prompt length from a select box"""
     if choice.startswith("Short"): return "2–3 sentences"
     if choice.startswith("Medium"): return "1–2 paragraphs"
-    return "a detailed"
+    return "a detailed, multi-section summary"
+
+def _format_instr(fmt:str) -> str:
+    return {
+        "Bullets": "Use concise bullet points.",
+        "Paragraphs": "Use clear paragraphs.",
+        "Headings + bullets": "Use section headings followed by bullet points.",
+        "Q&A": "Answer as Q&A pairs.",
+        "Table (when possible)": "If structure fits, produce a Markdown table."
+    }[fmt]
+
+def _tone_instr(tone:str) -> str:
+    return {
+        "Neutral":"Neutral, plain style.",
+        "Executive":"Executive tone with key metrics.",
+        "Bulletized":"Bulletized, no fluff.",
+        "Technical":"Technical register; keep jargon where precise.",
+        "Friendly":"Friendly, approachable.",
+        "Persuasive":"Persuasive with compelling language."
+    }[tone]
+
+def _summary_type(type:str) -> str:
+    return{
+        "Individual": "Summarize the following content in",
+        "Overall": "Give a overall summary for the following file content in "
+    }[type]
+
+def build_prompt(type:str, length_choice:str, format_choice:str, tone_choice:str) -> str:
+    return f"""
+    {_summary_type(type)} {_length_instr(length_choice)}.
+    {_format_instr(format_choice)} {_tone_instr(tone_choice)}
+
+    Content:
+    """
 
 def _summarize_website(url: str, length: str) -> str:
     st.session_state.running = True
@@ -60,7 +93,7 @@ def _summarize_website(url: str, length: str) -> str:
             return summarize_text(article_text, prompt=prompt)
     
 
-def _summarize_files(files, progress_bar, length):
+def _summarize_files(files, progress_bar, length_choice, format_choice, tone_choice):
     file_count = len(files)
     files_data = []
     master_summary_prompt = ""
@@ -83,8 +116,6 @@ def _summarize_files(files, progress_bar, length):
         progress_steps += file_count
     if st.session_state.enable_master:
         progress_steps += 1
-    
-
 
     for idx, file in enumerate(files, start=1):
 
@@ -104,7 +135,7 @@ def _summarize_files(files, progress_bar, length):
 
         if st.session_state.enable_individual:
             progress_bar.progress(progress / progress_steps, text=f"{idx}/{file_count} · {file.name} — Summarizing…")
-            prompt = f"Give a {_length_instr(length)} summary of the following text:"
+            prompt = build_prompt("Individual", length_choice, format_choice, tone_choice)
             summary = summarize_text(text, prompt=prompt)
 
             files_data.append({
@@ -121,7 +152,7 @@ def _summarize_files(files, progress_bar, length):
 
     if st.session_state.enable_master:
         progress_bar.progress(progress / progress_steps, text="Building overall summary…")
-        prompt = f"Give a {_length_instr(length)} overall summary for all the following text that were extracted from files:"
+        prompt = build_prompt("Overall", length_choice, format_choice, tone_choice)
         st.session_state.results_master_summary = summarize_text(master_summary_prompt, prompt=prompt)
         progress += 1
         progress_bar.progress(progress / progress_steps, text="Overall summary complete")
@@ -255,12 +286,19 @@ with file_tab:
                             disabled=_busy())
     file_count = len(files)
 
-    file_summary_length = st.selectbox(
-    "Select summary length:",
-    ["Short (2-3 sentences)", "Medium (1-2 paragraphs)", "Detailed (longer summary)"], 
-    key="file_summary_length",
-    disabled=_busy()
-    )
+    with st.container(horizontal=True):
+        file_summary_length = st.selectbox(
+        "Select summary length:",
+        ["Short (2-3 sentences)", "Medium (1-2 paragraphs)", "Detailed (longer summary)"], 
+        key="file_summary_length",
+        disabled=_busy()
+        )
+        tone_choice = st.selectbox("Tone/Voice", 
+                                     ["Neutral","Executive","Bulletized","Technical","Friendly","Persuasive"],
+                                    disabled=_busy())
+        format_choice = st.selectbox("Format", 
+                                     ["Bullets","Paragraphs","Headings + bullets","Q&A","Table (when possible)"],
+                                    disabled=_busy())
 
 
     with st.container(horizontal=True):
@@ -353,7 +391,7 @@ with col_main2:
 if st.session_state.busy_file and 'progress_bar' in locals():
     with file_tab:
         try:
-            _summarize_files(files, progress_bar, file_summary_length)
+            _summarize_files(files, progress_bar, file_summary_length, format_choice, tone_choice)
         except Exception as e:
             st.error(f"failed while summarizing files: {e}")
         finally:
