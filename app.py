@@ -57,7 +57,6 @@ def _tone_instr(tone:str) -> str:
     return {
         "Neutral":"Neutral, plain style.",
         "Executive":"Executive tone with key metrics.",
-        "Bulletized":"Bulletized, no fluff.",
         "Technical":"Technical register; keep jargon where precise.",
         "Friendly":"Friendly, approachable.",
         "Persuasive":"Persuasive with compelling language."
@@ -77,8 +76,7 @@ def build_prompt(type:str, length_choice:str, format_choice:str, tone_choice:str
     Content:
     """
 
-def _summarize_website(url: str, length: str) -> str:
-    st.session_state.running = True
+def _summarize_website(url: str, length_choice: str, format_choice: str, tone_choice: str) -> str:
     st.session_state.sel_idx = None
     st.session_state.results_df = pd.DataFrame()
     st.session_state.results_master_summary = None
@@ -88,7 +86,7 @@ def _summarize_website(url: str, length: str) -> str:
             st.session_state.busy_web = False
             st.error("Could not extract webpage content.")
         else:
-            prompt = f"Summarize this page in {_length_instr(length)}:"
+            prompt = build_prompt("Individual", length_choice, format_choice, tone_choice)
             st.session_state.busy_web = False
             return summarize_text(article_text, prompt=prompt)
     
@@ -174,7 +172,7 @@ def _display_website_summary():
     "⬇️ Download Website Summary",
     (st.session_state.results_website_summary or "").encode("utf-8"),
     file_name=f"website_summary.txt",
-    use_container_width=True,
+    width='stretch',
     key=f"dl_website_summary",
     )
 
@@ -199,7 +197,7 @@ def _display_summary_df():
                         data=mem_zip, 
                         file_name="summaries.zip", 
                         mime="application/zip",
-                        use_container_width=True,)
+                        width='stretch',)
 
     left, right = st.columns([0.12, 0.88])
     with left:
@@ -211,7 +209,7 @@ def _display_summary_df():
     event = st.dataframe(
         st.session_state.results_df[["file","type","size","preview"]],
         hide_index=True,
-        use_container_width=True,
+        width='stretch',
         on_select="ignore" if _busy() else "rerun",      
         #on_select="rerun",                
         selection_mode="single-row", 
@@ -240,7 +238,7 @@ def _display_summary_df():
             "⬇️ Download Summary",
             (row["summary"] or "").encode("utf-8"),
             file_name=f"{filename}_summary.txt",
-            use_container_width=True,
+            width='stretch',
             key=f"dl_{filename}_summary",
     )
     else:
@@ -253,7 +251,7 @@ def _display_master_summary():
     "⬇️ Download Overall Summary",
     (st.session_state.results_master_summary or "").encode("utf-8"),
     file_name=f"OVERALL_SUMMARY.txt",
-    use_container_width=True,
+    width='stretch',
     key=f"dl_overall_summary",
     )
 
@@ -293,11 +291,13 @@ with file_tab:
         key="file_summary_length",
         disabled=_busy()
         )
-        tone_choice = st.selectbox("Tone/Voice", 
-                                     ["Neutral","Executive","Bulletized","Technical","Friendly","Persuasive"],
+        file_tone_choice = st.selectbox("Tone/Voice", 
+                                     ["Neutral","Executive","Technical","Friendly","Persuasive"],
+                                    key="file_tone_choice",
                                     disabled=_busy())
-        format_choice = st.selectbox("Format", 
-                                     ["Bullets","Paragraphs","Headings + bullets","Q&A","Table (when possible)"],
+        file_format_choice = st.selectbox("Format", 
+                                     ["Paragraphs","Bullets","Headings + bullets","Q&A","Table (when possible)"],
+                                    key="file_format_choice",
                                     disabled=_busy())
 
 
@@ -334,12 +334,21 @@ with file_tab:
 
 with url_tab:
     url = st.text_input(label="Enter URL:", disabled=_busy())
-    url_summary_length = st.selectbox(
-    "Select summary length:",
-    ["Short (2-3 sentences)", "Medium (1-2 paragraphs)", "Detailed (longer summary)"], 
-    key="url_summary_length",
-    disabled=_busy()
-    )
+    with st.container(horizontal=True):
+        url_summary_length = st.selectbox(
+        "Select summary length:",
+        ["Short (2-3 sentences)", "Medium (1-2 paragraphs)", "Detailed (longer summary)"], 
+        key="url_summary_length",
+        disabled=_busy()
+        )
+        web_tone_choice = st.selectbox("Tone/Voice",
+                                     ["Neutral","Executive","Technical","Friendly","Persuasive"],
+                                    key="web_tone_choice",
+                                    disabled=_busy())
+        web_format_choice = st.selectbox("Format", 
+                                     ["Paragraphs","Bullets","Headings + bullets","Q&A","Table (when possible)"],
+                                    key="web_format_choice",
+                                    disabled=_busy())
     url_summarize_btn = st.button("Summarize Website", disabled=_busy())
     if url_summarize_btn and not url.strip():
         st.warning("Please enter a valid URL.")
@@ -391,7 +400,7 @@ with col_main2:
 if st.session_state.busy_file and 'progress_bar' in locals():
     with file_tab:
         try:
-            _summarize_files(files, progress_bar, file_summary_length, format_choice, tone_choice)
+            _summarize_files(files, progress_bar, file_summary_length, file_format_choice, file_tone_choice)
         except Exception as e:
             st.error(f"failed while summarizing files: {e}")
         finally:
@@ -400,7 +409,7 @@ if st.session_state.busy_file and 'progress_bar' in locals():
 elif st.session_state.busy_web:
     with url_tab:
         try:
-            st.session_state.results_website_summary = _summarize_website(url, url_summary_length)
+            st.session_state.results_website_summary = _summarize_website(url, url_summary_length, web_format_choice, web_tone_choice)
         except Exception as e:
             st.error(f"failed while summarizing website: {e}")
         finally:
