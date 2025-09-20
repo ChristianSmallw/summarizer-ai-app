@@ -62,21 +62,24 @@ def _tone_instr(tone:str) -> str:
         "Persuasive":"Persuasive with compelling language."
     }[tone]
 
+def _focus_instr(focus:list[str]) -> str:
+    return "Focus on: " + ", ".join(focus) + "." if focus else "Focus on the main ideas."
+
 def _summary_type(type:str) -> str:
     return{
         "Individual": "Summarize the following content in",
         "Overall": "Give a overall summary for the following file content in "
     }[type]
 
-def build_prompt(type:str, length_choice:str, format_choice:str, tone_choice:str) -> str:
+def build_prompt(type:str, length_choice:str, format_choice:str, tone_choice:str, focus_tags) -> str:
     return f"""
     {_summary_type(type)} {_length_instr(length_choice)}.
-    {_format_instr(format_choice)} {_tone_instr(tone_choice)}
+    {_format_instr(format_choice)} {_tone_instr(tone_choice)} {_focus_instr(focus_tags)}
 
     Content:
     """
 
-def _summarize_website(url: str, length_choice: str, format_choice: str, tone_choice: str) -> str:
+def _summarize_website(url: str, length_choice: str, format_choice: str, tone_choice: str, focus_tags: list[str]) -> str:
     st.session_state.sel_idx = None
     st.session_state.results_df = pd.DataFrame()
     st.session_state.results_master_summary = None
@@ -86,12 +89,12 @@ def _summarize_website(url: str, length_choice: str, format_choice: str, tone_ch
             st.session_state.busy_web = False
             st.error("Could not extract webpage content.")
         else:
-            prompt = build_prompt("Individual", length_choice, format_choice, tone_choice)
+            prompt = build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags)
             st.session_state.busy_web = False
             return summarize_text(article_text, prompt=prompt)
     
 
-def _summarize_files(files, progress_bar, length_choice, format_choice, tone_choice):
+def _summarize_files(files, progress_bar, length_choice: str, format_choice: str, tone_choice: str, focus_tags: list[str]):
     file_count = len(files)
     files_data = []
     master_summary_prompt = ""
@@ -133,7 +136,7 @@ def _summarize_files(files, progress_bar, length_choice, format_choice, tone_cho
 
         if st.session_state.enable_individual:
             progress_bar.progress(progress / progress_steps, text=f"{idx}/{file_count} · {file.name} — Summarizing…")
-            prompt = build_prompt("Individual", length_choice, format_choice, tone_choice)
+            prompt = build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags)
             summary = summarize_text(text, prompt=prompt)
 
             files_data.append({
@@ -150,7 +153,7 @@ def _summarize_files(files, progress_bar, length_choice, format_choice, tone_cho
 
     if st.session_state.enable_master:
         progress_bar.progress(progress / progress_steps, text="Building overall summary…")
-        prompt = build_prompt("Overall", length_choice, format_choice, tone_choice)
+        prompt = build_prompt("Overall", length_choice, format_choice, tone_choice, focus_tags)
         st.session_state.results_master_summary = summarize_text(master_summary_prompt, prompt=prompt)
         progress += 1
         progress_bar.progress(progress / progress_steps, text="Overall summary complete")
@@ -278,19 +281,24 @@ with left_input:
 #file Summarizer Tab
 
 with file_tab:
-    files = st.file_uploader(label="",
-                            type=["txt", "md", "log", "json", "csv", "html", "htm", "pdf", "docx"],
-                            accept_multiple_files=True,
-                            disabled=_busy())
+    with st.container(horizontal=True):
+        files = st.file_uploader(label="Upload Files to summarize:",
+                                type=["txt", "md", "log", "json", "csv", "html", "htm", "pdf", "docx"],
+                                accept_multiple_files=True,
+                                disabled=_busy())
+        file_focus_tags = st.multiselect("Focus", 
+                            ["Key points","Action items","Pros/Cons","Risks","Entities & facts","Numbers & metrics","Quotes"], 
+                            default=["Key points","Action items"],
+                            key="file_focus_tags")
     file_count = len(files)
 
     with st.container(horizontal=True):
         file_summary_length = st.selectbox(
-        "Select summary length:",
-        ["Short (2-3 sentences)", "Medium (1-2 paragraphs)", "Detailed (longer summary)"], 
-        key="file_summary_length",
-        disabled=_busy()
-        )
+                        "Select summary length:",
+                        ["Short (2-3 sentences)", "Medium (1-2 paragraphs)", "Detailed (longer summary)"], 
+                        key="file_summary_length",
+                        disabled=_busy()
+                        )
         file_tone_choice = st.selectbox("Tone/Voice", 
                                      ["Neutral","Executive","Technical","Friendly","Persuasive"],
                                     key="file_tone_choice",
@@ -299,6 +307,7 @@ with file_tab:
                                      ["Paragraphs","Bullets","Headings + bullets","Q&A","Table (when possible)"],
                                     key="file_format_choice",
                                     disabled=_busy())
+
 
 
     with st.container(horizontal=True):
@@ -333,14 +342,19 @@ with file_tab:
 #Website Summarizer Tab
 
 with url_tab:
-    url = st.text_input(label="Enter URL:", disabled=_busy())
+    with st.container(horizontal=True):
+        url = st.text_input(label="Enter URL:", disabled=_busy())
+        web_focus_tags = st.multiselect("Focus", 
+                            ["Key points","Action items","Pros/Cons","Risks","Entities & facts","Numbers & metrics","Quotes"], 
+                            default=["Key points","Action items"],
+                            key="web_focus_tags")
     with st.container(horizontal=True):
         url_summary_length = st.selectbox(
-        "Select summary length:",
-        ["Short (2-3 sentences)", "Medium (1-2 paragraphs)", "Detailed (longer summary)"], 
-        key="url_summary_length",
-        disabled=_busy()
-        )
+                            "Select summary length:",
+                            ["Short (2-3 sentences)", "Medium (1-2 paragraphs)", "Detailed (longer summary)"], 
+                            key="url_summary_length",
+                            disabled=_busy()
+                            )
         web_tone_choice = st.selectbox("Tone/Voice",
                                      ["Neutral","Executive","Technical","Friendly","Persuasive"],
                                     key="web_tone_choice",
@@ -400,7 +414,7 @@ with col_main2:
 if st.session_state.busy_file and 'progress_bar' in locals():
     with file_tab:
         try:
-            _summarize_files(files, progress_bar, file_summary_length, file_format_choice, file_tone_choice)
+            _summarize_files(files, progress_bar, file_summary_length, file_format_choice, file_tone_choice, file_focus_tags)
         except Exception as e:
             st.error(f"failed while summarizing files: {e}")
         finally:
@@ -409,7 +423,7 @@ if st.session_state.busy_file and 'progress_bar' in locals():
 elif st.session_state.busy_web:
     with url_tab:
         try:
-            st.session_state.results_website_summary = _summarize_website(url, url_summary_length, web_format_choice, web_tone_choice)
+            st.session_state.results_website_summary = _summarize_website(url, url_summary_length, web_format_choice, web_tone_choice, web_focus_tags)
         except Exception as e:
             st.error(f"failed while summarizing website: {e}")
         finally:
