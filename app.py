@@ -62,14 +62,14 @@ def default_overlap_for(chunk_size: int) -> int:
 def should_chunk(text_len: int, chunk_size: int) -> bool:
     return text_len > int(chunk_size * CHUNK_TRIGGER_RATIO)
 
-if "file_model_name" not in st.session_state:
-    st.session_state.file_model_name = "gpt-5-nano"
-if "file_chunk_size" not in st.session_state:
-    st.session_state.file_chunk_size = default_chunk_size_for(st.session_state.file_model_name)
-if "file_overlap" not in st.session_state:
-    st.session_state.file_overlap = default_overlap_for(st.session_state.file_chunk_size)
-if "file_strategy" not in st.session_state:
-    st.session_state.file_strategy = "map-reduce"
+if "model_name" not in st.session_state:
+    st.session_state.model_name = "gpt-5-nano"
+if "chunk_size" not in st.session_state:
+    st.session_state.chunk_size = default_chunk_size_for(st.session_state.model_name)
+if "overlap" not in st.session_state:
+    st.session_state.overlap = default_overlap_for(st.session_state.chunk_size)
+if "strategy" not in st.session_state:
+    st.session_state.strategy = "map-reduce"
 
 def _busy() -> bool:
     """Function to determine if the app should be in a 'in progress' state"""
@@ -116,7 +116,9 @@ def build_prompt(type:str, length_choice:str, format_choice:str, tone_choice:str
     Content:
     """
 
-def _summarize_website(url: str, length_choice: str, format_choice: str, tone_choice: str, focus_tags: list[str]) -> str:
+def _summarize_website(url: str, model_name: str, length_choice: str, format_choice: str, tone_choice: str, focus_tags: list[str], 
+                       chunk_strategy: int, chunk_size: int, chunk_overlap: int) -> str:
+    from utils.chunking import summarize_in_chunks, token_mode
     st.session_state.sel_idx = None
     st.session_state.results_df = pd.DataFrame()
     st.session_state.results_master_summary = None
@@ -126,18 +128,38 @@ def _summarize_website(url: str, length_choice: str, format_choice: str, tone_ch
             st.session_state.busy_web = False
             st.error("Could not extract webpage content.")
         else:
-            prompt = build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags)
+            # Optional: skip chunking for short inputs
+            use_chunking = True
+            if token_mode():
+                # if text is tiny (e.g., < 70% of chunk size), skip chunking
+                use_chunking = should_chunk(len(article_text), chunk_size)
+            else:
+                use_chunking = should_chunk(len(article_text), chunk_size)
+
+            if use_chunking:
+                summary = summarize_in_chunks(
+                    full_text=article_text,
+                    prompt_builder=build_prompt,
+                    model_name=model_name,
+                    length_choice=length_choice,
+                    format_choice=format_choice,
+                    tone_choice=tone_choice,
+                    focus_tags=focus_tags,
+                    summarize_text_fn=summarize_text,   # your existing function
+                    strategy=chunk_strategy,       # from a selectbox, or "map-reduce"
+                    chunk_size=chunk_size,         # from a slider, or DEFAULT_CHUNK_SIZE
+                    overlap=chunk_overlap          # from a slider, or DEFAULT_OVERLAP
+                )
+            else:
+                summary = summarize_text(article_text, model_name, prompt=build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags))
             st.session_state.busy_web = False
-            return summarize_text(article_text, prompt=prompt)
+            return summary
+        
     
 
-def _summarize_files(files, progress_bar, model_name, length_choice: str, format_choice: str, tone_choice: str
-                     , focus_tags: list[str], file_chunk_strategy: int, file_chunk_size: int, file_chunk_overlap: int):
-    from utils.chunking import summarize_in_chunks, DEFAULT_CHUNK_SIZE, DEFAULT_OVERLAP, token_mode, unit_label
-    #Temporary chunk variables(will implement controls)
-    # file_chunk_strategy = "map-reduce"
-    # file_chunk_size = DEFAULT_CHUNK_SIZE
-    # file_chunk_overlap = DEFAULT_OVERLAP
+def _summarize_files(files, progress_bar, model_name: str, length_choice: str, format_choice: str, tone_choice: str
+                     , focus_tags: list[str], chunk_strategy: int, chunk_size: int, chunk_overlap: int):
+    from utils.chunking import summarize_in_chunks, token_mode
 
     
     file_count = len(files)
@@ -186,9 +208,9 @@ def _summarize_files(files, progress_bar, model_name, length_choice: str, format
             use_chunking = True
             if token_mode():
                 # if text is tiny (e.g., < 70% of chunk size), skip chunking
-                use_chunking = should_chunk(len(text), file_chunk_size)
+                use_chunking = should_chunk(len(text), chunk_size)
             else:
-                use_chunking = should_chunk(len(text), file_chunk_size)
+                use_chunking = should_chunk(len(text), chunk_size)
 
             
             if use_chunking:
@@ -201,9 +223,9 @@ def _summarize_files(files, progress_bar, model_name, length_choice: str, format
                     tone_choice=tone_choice,
                     focus_tags=focus_tags,
                     summarize_text_fn=summarize_text,   # your existing function
-                    strategy=file_chunk_strategy,       # from a selectbox, or "map-reduce"
-                    chunk_size=file_chunk_size,         # from a slider, or DEFAULT_CHUNK_SIZE
-                    overlap=file_chunk_overlap          # from a slider, or DEFAULT_OVERLAP
+                    strategy=chunk_strategy,       # from a selectbox, or "map-reduce"
+                    chunk_size=chunk_size,         # from a slider, or DEFAULT_CHUNK_SIZE
+                    overlap=chunk_overlap          # from a slider, or DEFAULT_OVERLAP
                 )
             else:
                 summary = summarize_text(text, model_name, prompt=build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags))
@@ -230,9 +252,9 @@ def _summarize_files(files, progress_bar, model_name, length_choice: str, format
         use_chunking = True
         if token_mode():
             # if text is tiny (e.g., < 70% of chunk size), skip chunking
-            use_chunking = should_chunk(len(master_summary_prompt), file_chunk_size)
+            use_chunking = should_chunk(len(master_summary_prompt), chunk_size)
         else:
-            use_chunking = should_chunk(len(master_summary_prompt), file_chunk_size)
+            use_chunking = should_chunk(len(master_summary_prompt), chunk_size)
 
         if use_chunking:
             st.session_state.results_master_summary = summarize_in_chunks(
@@ -244,9 +266,9 @@ def _summarize_files(files, progress_bar, model_name, length_choice: str, format
                 tone_choice=tone_choice,
                 focus_tags=focus_tags,
                 summarize_text_fn=summarize_text,   # your existing function
-                strategy=file_chunk_strategy,       # from a selectbox, or "map-reduce"
-                chunk_size=file_chunk_size,         # from a slider, or DEFAULT_CHUNK_SIZE
-                overlap=file_chunk_overlap          # from a slider, or DEFAULT_OVERLAP
+                strategy=chunk_strategy,       # from a selectbox, or "map-reduce"
+                chunk_size=chunk_size,         # from a slider, or DEFAULT_CHUNK_SIZE
+                overlap=chunk_overlap          # from a slider, or DEFAULT_OVERLAP
             )
         else:
             st.session_state.results_master_summary = summarize_text(master_summary_prompt, model_name, prompt=build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags))
@@ -357,14 +379,72 @@ def _display_master_summary():
 
 # UI interface
 
-st.set_page_config(page_title="AI Summarizer", layout="wide")
+st.set_page_config(page_title="🤖 AI Summarizer", layout="wide")
 
 container_height = 800
+
+# Sidebar AI Model and chunking options
+with st.sidebar:
+    st.title("⚙️ AI Settings") 
+    model_name = st.selectbox(
+                            "OpenAI model",
+                            options=list(OPENAI_MODELS.keys()),
+                            key="model_name",
+                            disabled=_busy()
+                        )
+    
+        # When model changes, refresh defaults once (but allow user overrides after)
+    def _refresh_chunking_defaults():
+        st.session_state.chunk_size = default_chunk_size_for(st.session_state.model_name)
+        st.session_state.overlap    = default_overlap_for(st.session_state.chunk_size)      
+
+    # Run the refresh when selection changed this render
+    if model_name != st.session_state.get("_last_model", None):
+        _refresh_chunking_defaults()
+    st.session_state._last_model = model_name
+
+    def _on_chunk_change():
+        max_overlap = int(st.session_state.chunk_size * 0.5)
+        st.session_state.overlap = min(st.session_state.overlap, max_overlap)
+
+    chunk_size = st.slider(
+        "Chunk size (tokens)",
+        min_value=MIN_CHUNK,
+        max_value=min(MAX_CHUNK_CAP, OPENAI_MODELS[model_name]["context"]),
+        step=128,
+        key="chunk_size",
+        on_change=_on_chunk_change(),
+        disabled=_busy()
+        # help="Target tokens per chunk (we default to ~60% of the model's context)."
+    )
+
+    overlap = st.slider(
+        "Overlap (tokens)",
+        min_value=0,
+        max_value=int(chunk_size * 0.5),
+        step=64,
+        key="overlap",
+        disabled=_busy()
+        # help="Carry-over tokens from the tail of the previous chunk (defaults ~12% of chunk)."
+    )
+
+    strategy = st.selectbox(
+        "Chunking strategy",
+        options=["map-only", "map-reduce", "map-refine"],
+        key="strategy",
+        help=(
+            "map-only: concat per-chunk summaries\n"
+            "map-reduce: combine summaries in a final pass (robust default)\n"
+            "map-refine: iterative refinement, preserves details"
+        ),
+        disabled=_busy()
+    )
+
 
 main = st.container(horizontal_alignment="center")
 
 with main:
-    st.title("📰 AI Summarizer", width=355) 
+    st.title("🤖 AI Summarizer", width=355) 
     col_main1, col_main2 = st.columns(2, width=1500)
 
 with col_main1:
@@ -374,7 +454,7 @@ with col_main1:
 with left_input:
     file_tab, url_tab = st.tabs(["📁 File Upload", "🔗 URL"])
 
-#file Summarizer Tab
+#File Summarizer Tab
 
 with file_tab:
     with st.container(horizontal=True):
@@ -383,13 +463,7 @@ with file_tab:
                                 accept_multiple_files=True,
                                 disabled=_busy())
         with st.container():
-            file_model_name = st.selectbox(
-                                        "OpenAI model",
-                                        options=list(OPENAI_MODELS.keys()),
-                                        #index=list(OPENAI_MODELS.keys()).index(st.session_state.file_model_name),
-                                        key="file_model_name",
-                                        disabled=_busy()
-                                    )
+
             file_summary_length = st.selectbox(
                                     "Select summary length:",
                                     ["Short (2-3 sentences)", "Medium (1-2 paragraphs)", "Detailed (longer summary)"], 
@@ -398,15 +472,6 @@ with file_tab:
                                     )
     file_count = len(files)
 
-    # When model changes, refresh defaults once (but allow user overrides after)
-    def _refresh_file_chunking_defaults():
-        st.session_state.file_chunk_size = default_chunk_size_for(st.session_state.file_model_name)
-        st.session_state.file_overlap    = default_overlap_for(st.session_state.file_chunk_size)      
-
-    # Run the refresh when selection changed this render
-    if file_model_name != st.session_state.get("_file_last_model", None):
-        _refresh_file_chunking_defaults()
-    st.session_state._file_last_model = file_model_name
 
     with st.container(horizontal=True):
         file_tone_choice = st.selectbox("Tone/Voice", 
@@ -422,54 +487,6 @@ with file_tab:
                                     #default=["Key points","Action items"],
                                     key="file_focus_tags"
                                     )
-
-    with st.container(horizontal=True):
-        
-        def _on_chunk_change():
-            max_overlap = int(st.session_state.file_chunk_size * 0.5)
-            st.session_state.file_overlap = min(st.session_state.file_overlap, max_overlap)
-
-        file_chunk_size = st.slider(
-            "Chunk size (tokens)",
-            min_value=MIN_CHUNK,
-            max_value=min(MAX_CHUNK_CAP, OPENAI_MODELS[file_model_name]["context"]),
-            #value=st.session_state.file_chunk_size,
-            step=128,
-            key="file_chunk_size",
-            on_change=_on_chunk_change(),
-            disabled=_busy()
-            # help="Target tokens per chunk (we default to ~60% of the model's context)."
-        )
-
-
-        # if st.session_state.file_overlap == 0:
-        #     st.session_state.file_overlap = default_overlap_for(st.session_state.file_chunk_size)
-        # #st.session_state.file_overlap = default_overlap_for(st.session_state.file_chunk_size) if 0 else st.session_state.file_overlap
-
-        file_overlap = st.slider(
-            "Overlap (tokens)",
-            min_value=0,
-            max_value=int(file_chunk_size * 0.5),
-            #value=min(st.session_state.file_overlap, int(file_chunk_size * 0.5)),
-            step=64,
-            key="file_overlap",
-            disabled=_busy()
-            # help="Carry-over tokens from the tail of the previous chunk (defaults ~12% of chunk)."
-        )
-
-        st.session_state._file_last_overlap = file_overlap
-
-        file_strategy = st.selectbox(
-            "Chunking strategy",
-            options=["map-only", "map-reduce", "map-refine"],
-            key="file_strategy",
-            help=(
-                "map-only: concat per-chunk summaries\n"
-                "map-reduce: combine summaries in a final pass (robust default)\n"
-                "map-refine: iterative refinement, preserves details"
-            ),
-            disabled=_busy()
-        )
 
     with st.container(horizontal=True):
         file_summarize_btn = st.button(f"Summarize File" + ("s" if file_count > 1 else ""), disabled=(file_count == 0) or _busy())
@@ -505,17 +522,14 @@ with file_tab:
 with url_tab:
     with st.container(horizontal=True):
         url = st.text_input(label="Enter URL:", disabled=_busy())
-        web_focus_tags = st.multiselect("Focus", 
-                            ["Key points","Action items","Pros/Cons","Risks","Entities & facts","Numbers & metrics","Quotes"], 
-                            default=["Key points","Action items"],
-                            key="web_focus_tags")
-    with st.container(horizontal=True):
         url_summary_length = st.selectbox(
-                            "Select summary length:",
-                            ["Short (2-3 sentences)", "Medium (1-2 paragraphs)", "Detailed (longer summary)"], 
-                            key="url_summary_length",
-                            disabled=_busy()
-                            )
+                    "Select summary length:",
+                    ["Short (2-3 sentences)", "Medium (1-2 paragraphs)", "Detailed (longer summary)"], 
+                    key="url_summary_length",
+                    disabled=_busy()
+                    )
+    with st.container(horizontal=True):
+
         web_tone_choice = st.selectbox("Tone/Voice",
                                      ["Neutral","Executive","Technical","Friendly","Persuasive"],
                                     key="web_tone_choice",
@@ -524,6 +538,10 @@ with url_tab:
                                      ["Paragraphs","Bullets","Headings + bullets","Q&A","Table (when possible)"],
                                     key="web_format_choice",
                                     disabled=_busy())
+        web_focus_tags = st.multiselect("Focus (optional)", 
+                    ["Key points","Action items","Pros/Cons","Risks","Entities & facts","Numbers & metrics","Quotes"], 
+                    #default=["Key points","Action items"],
+                    key="web_focus_tags")
     url_summarize_btn = st.button("Summarize Website", disabled=_busy())
     if url_summarize_btn and not url.strip():
         st.warning("Please enter a valid URL.")
@@ -575,8 +593,8 @@ with col_main2:
 if st.session_state.busy_file and 'progress_bar' in locals():
     with file_tab:
         try:
-            _summarize_files(files, progress_bar, file_model_name, file_summary_length, file_format_choice, file_tone_choice, file_focus_tags, 
-                             file_strategy, file_chunk_size, file_overlap)
+            _summarize_files(files, progress_bar, model_name, file_summary_length, file_format_choice, file_tone_choice, file_focus_tags, 
+                             strategy, chunk_size, overlap)
         except Exception as e:
             st.error(f"failed while summarizing files: {e}")
         finally:
@@ -585,7 +603,8 @@ if st.session_state.busy_file and 'progress_bar' in locals():
 elif st.session_state.busy_web:
     with url_tab:
         try:
-            st.session_state.results_website_summary = _summarize_website(url, url_summary_length, web_format_choice, web_tone_choice, web_focus_tags)
+            st.session_state.results_website_summary = _summarize_website(url, model_name, url_summary_length, web_format_choice, web_tone_choice, web_focus_tags,
+                                                                        strategy, chunk_size, overlap)
         except Exception as e:
             st.error(f"failed while summarizing website: {e}")
         finally:
