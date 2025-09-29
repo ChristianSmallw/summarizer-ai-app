@@ -499,7 +499,7 @@ with file_tab:
                                     key="file_format_choice",
                                     disabled=_busy())
         file_focus_tags = st.multiselect("Focus (optional)", 
-                                    ["Key points","Action items","Pros/Cons","Risks","Entities & facts","Numbers & metrics","Quotes"], 
+                                    ["Key points","Action items","Pros/Cons","Risks","Entities & facts","Numbers & metrics","Quotes", "Vibe"], 
                                     #default=["Key points","Action items"],
                                     key="file_focus_tags",
                                     disabled=_busy()
@@ -556,7 +556,7 @@ with url_tab:
                                     key="web_format_choice",
                                     disabled=_busy())
         web_focus_tags = st.multiselect("Focus (optional)", 
-                    ["Key points","Action items","Pros/Cons","Risks","Entities & facts","Numbers & metrics","Quotes"], 
+                    ["Key points","Action items","Pros/Cons","Risks","Entities & facts","Numbers & metrics","Quotes", "Vibe"], 
                     #default=["Key points","Action items"],
                     key="web_focus_tags",
                     disabled=_busy())
