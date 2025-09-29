@@ -20,7 +20,9 @@ OPENAI_MODELS = {
 }
 
 LOCAL_MODELS = {
-    "qwen3:32b":       {"context": 4_000},
+    "gpt-oss:20b_16k":       {"context": 16_384},
+    "gpt-oss:20b_32k":       {"context": 32_768}
+    # "qwen3:32b":       {"context": 4_000}
 }
 
 CHUNK_TRIGGER_RATIO = 0.7      # if text_len > 0.7 * chunk_size → chunk

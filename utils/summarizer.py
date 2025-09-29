@@ -61,7 +61,7 @@ def summarize_text(text, model_name, is_local, prompt="Summarize this:"):
     # # clean = strip_thinking(raw)
     # # return clean
     # return response.choices[0].message.content
-    temp = 1 if model_name.startswith("gpt-5") else 0.8
+    temp = 1 if model_name.startswith("gpt-5") else 0.2
     if not is_local:
         response = client.responses.create(
             model=model_name,
@@ -87,7 +87,7 @@ def summarize_text(text, model_name, is_local, prompt="Summarize this:"):
                 "prompt": prompt,
                 "max_tokens": 0,
                 "model": model_name,
-                "temperature": 0.8
+                "temperature": 0.2
             },
             timeout=600
         )

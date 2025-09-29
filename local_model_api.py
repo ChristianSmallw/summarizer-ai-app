@@ -1,10 +1,7 @@
 from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
-from utils.summarizer import summarize_text
 from pydantic import BaseModel
 from openai import OpenAI
-import re
-import requests
 import os
 
 client = OpenAI(
@@ -21,7 +18,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def _summarize(text, model_name, prompt="Summarize this:"):
+def _summarize(text, model_name, temp, prompt="Summarize this:"):
     response = client.chat.completions.create(
         model=model_name,
         messages=[
@@ -29,7 +26,7 @@ def _summarize(text, model_name, prompt="Summarize this:"):
             {"role": "user", "content": f"{prompt}\n\n{text}"}
         ],
         
-        temperature=0.8
+        temperature=temp
     )
     return response.choices[0].message.content
 
@@ -50,7 +47,7 @@ def summarize(req: SumReq):
         raise HTTPException(400, "text too short")
 
     try:
-        out = _summarize(req.text, req.model, req.prompt)
+        out = _summarize(req.text, req.model, req.temperature, req.prompt)
     except Exception as e:
         raise HTTPException(500, f"backend error: {e}")
     return {"summary": out}
