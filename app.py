@@ -304,6 +304,7 @@ def _display_website_summary():
     file_name=f"website_summary.txt",
     width='stretch',
     key=f"dl_website_summary",
+    disabled=_busy(),
     )
 
 def _display_summary_df():
@@ -327,7 +328,8 @@ def _display_summary_df():
                         data=mem_zip, 
                         file_name="summaries.zip", 
                         mime="application/zip",
-                        width='stretch',)
+                        width='stretch',
+                        disabled=_busy())
 
     left, right = st.columns([0.12, 0.88])
     with left:
@@ -351,12 +353,13 @@ def _display_summary_df():
         st.session_state.sel_idx = None
 
     #Prevent reading from no results
-    if _busy():
-        return
+    # if _busy():
+    #     return
 
     # 2) Read the selection dict safely
-    rows = (event or {}).get("selection", {}).get("rows", [])
-    st.session_state.sel_idx = rows[0] if rows else st.session_state.sel_idx
+    if not _busy():
+        rows = (event or {}).get("selection", {}).get("rows", [])
+        st.session_state.sel_idx = rows[0] if rows else st.session_state.sel_idx
 
     # 3) Show expander if we have a selected index
     if st.session_state.sel_idx is not None and 0 <= st.session_state.sel_idx < len(st.session_state.results_df):
@@ -370,6 +373,7 @@ def _display_summary_df():
             file_name=f"{filename}_summary.txt",
             width='stretch',
             key=f"dl_{filename}_summary",
+            disabled=_busy()
     )
     else:
         st.info("Click a row to view its full summary.")
@@ -383,6 +387,7 @@ def _display_master_summary():
     file_name=f"OVERALL_SUMMARY.txt",
     width='stretch',
     key=f"dl_overall_summary",
+    disabled=_busy()
     )
 
 
@@ -395,7 +400,7 @@ container_height = 800
 # Sidebar AI Model and chunking options
 with st.sidebar:
     st.title("⚙️ AI Settings") 
-    use_local = st.toggle("Use local models?")
+    use_local = st.toggle("Use local models?", disabled=_busy())
     selected_models = OPENAI_MODELS if not use_local else LOCAL_MODELS
     model_name = st.selectbox(
                             "OpenAI Models" if not use_local else "Local Models",
@@ -496,7 +501,8 @@ with file_tab:
         file_focus_tags = st.multiselect("Focus (optional)", 
                                     ["Key points","Action items","Pros/Cons","Risks","Entities & facts","Numbers & metrics","Quotes"], 
                                     #default=["Key points","Action items"],
-                                    key="file_focus_tags"
+                                    key="file_focus_tags",
+                                    disabled=_busy()
                                     )
 
     with st.container(horizontal=True):
@@ -552,7 +558,8 @@ with url_tab:
         web_focus_tags = st.multiselect("Focus (optional)", 
                     ["Key points","Action items","Pros/Cons","Risks","Entities & facts","Numbers & metrics","Quotes"], 
                     #default=["Key points","Action items"],
-                    key="web_focus_tags")
+                    key="web_focus_tags",
+                    disabled=_busy())
     url_summarize_btn = st.button("Summarize Website", disabled=_busy())
     if url_summarize_btn and not url.strip():
         st.warning("Please enter a valid URL.")
