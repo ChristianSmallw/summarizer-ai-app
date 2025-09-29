@@ -19,6 +19,10 @@ OPENAI_MODELS = {
     "gpt-3.5-turbo":{"context": 16_000}
 }
 
+LOCAL_MODELS = {
+    "qwen3:32b":       {"context": 4_000},
+}
+
 CHUNK_TRIGGER_RATIO = 0.7      # if text_len > 0.7 * chunk_size → chunk
 CHUNK_TARGET_RATIO  = 0.60     # chunk_size ≈ 60% of context window
 OVERLAP_RATIO       = 0.12     # overlap ≈ 12% of chunk_size
@@ -52,8 +56,8 @@ if "enable_master" not in st.session_state:
 
 #internal function
 
-def default_chunk_size_for(model_name: str) -> int:
-    ctx = OPENAI_MODELS.get(model_name, {}).get("context", 16_000)
+def default_chunk_size_for(model_name: str, models) -> int:
+    ctx = models.get(model_name, {}).get("context", 16_000)
     return max(MIN_CHUNK, int(ctx * CHUNK_TARGET_RATIO))
 
 def default_overlap_for(chunk_size: int) -> int:
@@ -65,7 +69,7 @@ def should_chunk(text_len: int, chunk_size: int) -> bool:
 if "model_name" not in st.session_state:
     st.session_state.model_name = "gpt-5-nano"
 if "chunk_size" not in st.session_state:
-    st.session_state.chunk_size = default_chunk_size_for(st.session_state.model_name)
+    st.session_state.chunk_size = default_chunk_size_for(st.session_state.model_name, OPENAI_MODELS)
 if "overlap" not in st.session_state:
     st.session_state.overlap = default_overlap_for(st.session_state.chunk_size)
 if "strategy" not in st.session_state:
@@ -116,7 +120,7 @@ def build_prompt(type:str, length_choice:str, format_choice:str, tone_choice:str
     Content:
     """
 
-def _summarize_website(url: str, model_name: str, length_choice: str, format_choice: str, tone_choice: str, focus_tags: list[str], 
+def _summarize_website(url: str, model_name: str, use_local:bool,length_choice: str, format_choice: str, tone_choice: str, focus_tags: list[str], 
                        chunk_strategy: int, chunk_size: int, chunk_overlap: int) -> str:
     from utils.chunking import summarize_in_chunks, token_mode
     st.session_state.sel_idx = None
@@ -151,13 +155,13 @@ def _summarize_website(url: str, model_name: str, length_choice: str, format_cho
                     overlap=chunk_overlap          # from a slider, or DEFAULT_OVERLAP
                 )
             else:
-                summary = summarize_text(article_text, model_name, prompt=build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags))
+                summary = summarize_text(article_text, model_name, use_local, prompt=build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags))
             st.session_state.busy_web = False
             return summary
         
     
 
-def _summarize_files(files, progress_bar, model_name: str, length_choice: str, format_choice: str, tone_choice: str
+def _summarize_files(files, progress_bar, model_name: str, use_local:bool, length_choice: str, format_choice: str, tone_choice: str
                      , focus_tags: list[str], chunk_strategy: int, chunk_size: int, chunk_overlap: int):
     from utils.chunking import summarize_in_chunks, token_mode
 
@@ -202,6 +206,7 @@ def _summarize_files(files, progress_bar, model_name: str, length_choice: str, f
         progress_bar.progress(progress / progress_steps, text=f"{idx}/{file_count} · {file.name} — Extracted")
         
         if st.session_state.enable_individual:
+            
             progress_bar.progress(progress / progress_steps, text=f"{idx}/{file_count} · {file.name} — Summarizing…")
             
             # Optional: skip chunking for short inputs
@@ -212,7 +217,6 @@ def _summarize_files(files, progress_bar, model_name: str, length_choice: str, f
             else:
                 use_chunking = should_chunk(len(text), chunk_size)
 
-            
             if use_chunking:
                 summary = summarize_in_chunks(
                     full_text=text,
@@ -228,7 +232,7 @@ def _summarize_files(files, progress_bar, model_name: str, length_choice: str, f
                     overlap=chunk_overlap          # from a slider, or DEFAULT_OVERLAP
                 )
             else:
-                summary = summarize_text(text, model_name, prompt=build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags))
+                summary = summarize_text(text, model_name, use_local, prompt=build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags))
 
             #prompt = build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags)
             #summary = summarize_text(text, prompt=prompt)
@@ -271,7 +275,7 @@ def _summarize_files(files, progress_bar, model_name: str, length_choice: str, f
                 overlap=chunk_overlap          # from a slider, or DEFAULT_OVERLAP
             )
         else:
-            st.session_state.results_master_summary = summarize_text(master_summary_prompt, model_name, prompt=build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags))
+            st.session_state.results_master_summary = summarize_text(master_summary_prompt, model_name, use_local, prompt=build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags))
 
         progress += 1
         progress_bar.progress(progress / progress_steps, text="Overall summary complete")
@@ -386,16 +390,18 @@ container_height = 800
 # Sidebar AI Model and chunking options
 with st.sidebar:
     st.title("⚙️ AI Settings") 
+    use_local = st.toggle("Use local models?")
+    selected_models = OPENAI_MODELS if not use_local else LOCAL_MODELS
     model_name = st.selectbox(
-                            "OpenAI model",
-                            options=list(OPENAI_MODELS.keys()),
+                            "OpenAI Models" if not use_local else "Local Models",
+                            options=list(selected_models),
                             key="model_name",
                             disabled=_busy()
                         )
     
         # When model changes, refresh defaults once (but allow user overrides after)
     def _refresh_chunking_defaults():
-        st.session_state.chunk_size = default_chunk_size_for(st.session_state.model_name)
+        st.session_state.chunk_size = default_chunk_size_for(st.session_state.model_name, selected_models)
         st.session_state.overlap    = default_overlap_for(st.session_state.chunk_size)      
 
     # Run the refresh when selection changed this render
@@ -410,7 +416,7 @@ with st.sidebar:
     chunk_size = st.slider(
         "Chunk size (tokens)",
         min_value=MIN_CHUNK,
-        max_value=min(MAX_CHUNK_CAP, OPENAI_MODELS[model_name]["context"]),
+        max_value=min(MAX_CHUNK_CAP, selected_models[model_name]["context"]),
         step=128,
         key="chunk_size",
         on_change=_on_chunk_change(),
@@ -593,7 +599,7 @@ with col_main2:
 if st.session_state.busy_file and 'progress_bar' in locals():
     with file_tab:
         try:
-            _summarize_files(files, progress_bar, model_name, file_summary_length, file_format_choice, file_tone_choice, file_focus_tags, 
+            _summarize_files(files, progress_bar, model_name, use_local, file_summary_length, file_format_choice, file_tone_choice, file_focus_tags, 
                              strategy, chunk_size, overlap)
         except Exception as e:
             st.error(f"failed while summarizing files: {e}")
@@ -603,7 +609,7 @@ if st.session_state.busy_file and 'progress_bar' in locals():
 elif st.session_state.busy_web:
     with url_tab:
         try:
-            st.session_state.results_website_summary = _summarize_website(url, model_name, url_summary_length, web_format_choice, web_tone_choice, web_focus_tags,
+            st.session_state.results_website_summary = _summarize_website(url, model_name, use_local, url_summary_length, web_format_choice, web_tone_choice, web_focus_tags,
                                                                         strategy, chunk_size, overlap)
         except Exception as e:
             st.error(f"failed while summarizing website: {e}")

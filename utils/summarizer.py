@@ -4,14 +4,15 @@ from bs4 import BeautifulSoup
 from openai import OpenAI
 from utils.config import get_secret
 import re
+import time
 
 OPENAI_API_KEY = get_secret("OPENAI_API_KEY")
 # OLLAMA_API = "http://localhost:11434/api/chat"
 client = OpenAI(api_key=OPENAI_API_KEY)
-# client = OpenAI(
-#     base_url="http://localhost:11434/v1",
-#     api_key="ollama" 
-# )
+ollama_client = OpenAI(
+    base_url="http://localhost:11434/v1",
+    api_key="ollama" 
+)
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
 }
@@ -43,7 +44,7 @@ def strip_thinking(text: str) -> str:
     return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
 
 
-def summarize_text(text, model_name, prompt="Summarize this:"):
+def summarize_text(text, model_name, is_local, prompt="Summarize this:"):
     # response = client.chat.completions.create(
     #     model=model_name,
     #     #model="qwen3:32b",
@@ -61,14 +62,38 @@ def summarize_text(text, model_name, prompt="Summarize this:"):
     # # return clean
     # return response.choices[0].message.content
     temp = 1 if model_name.startswith("gpt-5") else 0.8
-    response = client.responses.create(
-        model=model_name,
-        #model="qwen3:32b",
-        instructions="You are an assistant that analyzes text and provides a summary, ignoring text that might be navigation related.",
-        input=f"{prompt}\n\n{text}",
-        temperature=temp
-    )
-    return response.output_text
+    if not is_local:
+        response = client.responses.create(
+            model=model_name,
+            #model="qwen3:32b",
+            instructions="You are an assistant that analyzes text and provides a summary, ignoring text that might be navigation related.",
+            input=f"{prompt}\n\n{text}",
+            temperature=temp
+        )
+        return response.output_text
+    else:
+        # response = ollama_client.chat.completions.create(
+        #     model=model_name,
+        #     instructions="You are an assistant that analyzes text and provides a summary, ignoring text that might be navigation related.",
+        #     input=f"{prompt}\n\n{text}",
+        #     temperature=temp
+        # )
+        # raw = response.choices[0].message.content
+        # clean = strip_thinking(raw)
+        r = requests.post(
+            "https://reese-shingly-johnetta.ngrok-free.dev/summarize",
+            json={
+                "text": text,
+                "prompt": prompt,
+                "max_tokens": 0,
+                "model": model_name,
+                "temperature": 0.8
+            },
+            timeout=600
+        )
+        raw = r.json()["summary"]
+        clean = strip_thinking(raw)
+        return clean
 
 def main():
     while True:

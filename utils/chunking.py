@@ -223,11 +223,12 @@ def summarize_in_chunks(
     full_text: str,
     prompt_builder: Callable[[str, str, str, str, list[str]], str],
     model_name,
+    use_local,
     length_choice: str,
     format_choice: str,
     tone_choice: str,
     focus_tags: list[str],
-    summarize_text_fn: Callable[[str, str, str], str],  # accepts (text) or (text, *, prompt="")
+    summarize_text_fn: Callable[[str, str, bool, str], str],  # accepts (text) or (text, *, prompt="")
     *,
     strategy: str = "map-reduce",   # "map-only" | "map-reduce" | "map-refine"
     chunk_size: Optional[int] = None,
@@ -255,7 +256,7 @@ def summarize_in_chunks(
     # MAP
     for i, ch in enumerate(chunks, start=1):
         p = f"{map_prompt}\nYou are summarizing CHUNK {i}/{n}. Make it standalone and factual."
-        s = summarize_text_fn(ch, model_name, p)
+        s = summarize_text_fn(ch, model_name, use_local, p)
         map_summaries.append(s)
 
     if strategy == "map-only":
@@ -270,12 +271,12 @@ def summarize_in_chunks(
             )
             refine_prompt = f"{map_prompt}\n{refine_instr}"
             payload = f"Current cumulative summary:\n{running}\n\nNew chunk summary ({i}/{n}):\n{s}"
-            running = summarize_text_fn(payload, model_name, refine_prompt)
+            running = summarize_text_fn(payload, model_name, use_local, refine_prompt)
         return running
 
     # REDUCE (default)
     reduce_prompt = prompt_builder("Overall", length_choice, format_choice, tone_choice, focus_tags)
     combined = "\n\n".join(f"- Chunk {i+1}:\n{cs}" for i, cs in enumerate(map_summaries))
     payload = f"Combine these chunk summaries into a cohesive overall summary:\n\n{combined}\n"
-    final = summarize_text_fn(payload, model_name, reduce_prompt)
+    final = summarize_text_fn(payload, model_name, use_local, reduce_prompt)
     return final
