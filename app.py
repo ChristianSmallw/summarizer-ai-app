@@ -1,19 +1,18 @@
 import streamlit as st
+from sidebar import render_sidebar
 from utils.summarizer import extract_text_from_url, summarize_text
 from utils.text_io import extract_text_from_bytes
-from core.models import OPENAI_MODELS, LOCAL_MODELS
-from core.chunking import should_chunk, MIN_CHUNK, MAX_CHUNK
-from ui.state import init_session_state, busy, refresh_chunking_defaults, on_chunk_change
+from core.chunking import summarize_in_chunks, token_mode, should_chunk
 from core.prompts import *
+from core.types import ModelSettings
+from ui.state import init_session_state, busy
 import pandas as pd
 import time
 import os
 from io import BytesIO
 import zipfile
 
-def _summarize_website(url: str, model_name: str, use_local:bool,length_choice: str, format_choice: str, tone_choice: str, focus_tags: list[str], 
-                       chunk_strategy: int, chunk_size: int, chunk_overlap: int) -> str:
-    from utils.chunking import summarize_in_chunks, token_mode
+def _summarize_website(url: str, model_settings: ModelSettings,length_choice: str, format_choice: str, tone_choice: str, focus_tags: list[str]) -> str:
     st.session_state.sel_idx = None
     st.session_state.results_df = pd.DataFrame()
     st.session_state.results_master_summary = None
@@ -27,35 +26,27 @@ def _summarize_website(url: str, model_name: str, use_local:bool,length_choice: 
             use_chunking = True
             if token_mode():
                 # if text is tiny (e.g., < 70% of chunk size), skip chunking
-                use_chunking = should_chunk(len(article_text), chunk_size)
+                use_chunking = should_chunk(len(article_text), model_settings.chunk_size)
             else:
-                use_chunking = should_chunk(len(article_text), chunk_size)
+                use_chunking = should_chunk(len(article_text), model_settings.chunk_size)
 
             if use_chunking:
                 summary = summarize_in_chunks(
                     full_text=article_text,
-                    prompt_builder=build_prompt,
-                    model_name=model_name,
-                    use_local=use_local,
+                    model_settings=model_settings,
                     length_choice=length_choice,
                     format_choice=format_choice,
                     tone_choice=tone_choice,
-                    focus_tags=focus_tags,
-                    summarize_text_fn=summarize_text,   # your existing function
-                    strategy=chunk_strategy,       # from a selectbox, or "map-reduce"
-                    chunk_size=chunk_size,         # from a slider, or DEFAULT_CHUNK_SIZE
-                    overlap=chunk_overlap          # from a slider, or DEFAULT_OVERLAP
+                    focus_tags=focus_tags
                 )
             else:
-                summary = summarize_text(article_text, model_name, use_local, prompt=build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags))
+                summary = summarize_text(article_text, model_settings.model_name, model_settings.use_local, prompt=build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags))
             st.session_state.busy_web = False
             return summary
         
     
 
-def _summarize_files(files, progress_bar, model_name: str, use_local:bool, length_choice: str, format_choice: str, tone_choice: str
-                     , focus_tags: list[str], chunk_strategy: int, chunk_size: int, chunk_overlap: int):
-    from utils.chunking import summarize_in_chunks, token_mode
+def _summarize_files(files, progress_bar, model_settings: ModelSettings, length_choice: str, format_choice: str, tone_choice: str, focus_tags: list[str]):
 
     
     file_count = len(files)
@@ -105,27 +96,21 @@ def _summarize_files(files, progress_bar, model_name: str, use_local:bool, lengt
             use_chunking = True
             if token_mode():
                 # if text is tiny (e.g., < 70% of chunk size), skip chunking
-                use_chunking = should_chunk(len(text), chunk_size)
+                use_chunking = should_chunk(len(text), model_settings.chunk_size)
             else:
-                use_chunking = should_chunk(len(text), chunk_size)
+                use_chunking = should_chunk(len(text), model_settings.chunk_size)
 
             if use_chunking:
                 summary = summarize_in_chunks(
                     full_text=text,
-                    prompt_builder=build_prompt,
-                    model_name=model_name,
-                    use_local=use_local,
+                    model_settings=model_settings,
                     length_choice=length_choice,
                     format_choice=format_choice,
                     tone_choice=tone_choice,
-                    focus_tags=focus_tags,
-                    summarize_text_fn=summarize_text,   # your existing function
-                    strategy=chunk_strategy,       # from a selectbox, or "map-reduce"
-                    chunk_size=chunk_size,         # from a slider, or DEFAULT_CHUNK_SIZE
-                    overlap=chunk_overlap          # from a slider, or DEFAULT_OVERLAP
+                    focus_tags=focus_tags
                 )
             else:
-                summary = summarize_text(text, model_name, use_local, prompt=build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags))
+                summary = summarize_text(text, model_settings.model_name, model_settings.use_local, prompt=build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags))
 
             #prompt = build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags)
             #summary = summarize_text(text, prompt=prompt)
@@ -149,27 +134,21 @@ def _summarize_files(files, progress_bar, model_name: str, use_local:bool, lengt
         use_chunking = True
         if token_mode():
             # if text is tiny (e.g., < 70% of chunk size), skip chunking
-            use_chunking = should_chunk(len(master_summary_prompt), chunk_size)
+            use_chunking = should_chunk(len(master_summary_prompt), model_settings.chunk_size)
         else:
-            use_chunking = should_chunk(len(master_summary_prompt), chunk_size)
+            use_chunking = should_chunk(len(master_summary_prompt), model_settings.chunk_size)
 
         if use_chunking:
             st.session_state.results_master_summary = summarize_in_chunks(
                 full_text=master_summary_prompt,
-                prompt_builder=build_prompt,
-                model_name=model_name,
-                use_local=use_local,
+                model_settings=model_settings,
                 length_choice=length_choice,
                 format_choice=format_choice,
                 tone_choice=tone_choice,
-                focus_tags=focus_tags,
-                summarize_text_fn=summarize_text,   # your existing function
-                strategy=chunk_strategy,       # from a selectbox, or "map-reduce"
-                chunk_size=chunk_size,         # from a slider, or DEFAULT_CHUNK_SIZE
-                overlap=chunk_overlap          # from a slider, or DEFAULT_OVERLAP
+                focus_tags=focus_tags
             )
         else:
-            st.session_state.results_master_summary = summarize_text(master_summary_prompt, model_name, use_local, prompt=build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags))
+            st.session_state.results_master_summary = summarize_text(master_summary_prompt, model_settings.model_name, sidebar_settings.use_local, prompt=build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags))
 
         progress += 1
         progress_bar.progress(progress / progress_steps, text="Overall summary complete")
@@ -288,58 +267,9 @@ st.set_page_config(page_title="🤖 AI Summarizer", layout="wide")
 
 container_height = 800
 
+
 # Sidebar AI Model and chunking options
-with st.sidebar:
-    st.title("⚙️ AI Settings") 
-    use_local = st.toggle("Use local models?", disabled=busy())
-    selected_models = OPENAI_MODELS if not use_local else LOCAL_MODELS
-    model_name = st.selectbox(
-                            "OpenAI Models" if not use_local else "Local Models",
-                            options=list(selected_models),
-                            key="model_name",
-                            disabled=busy()
-                        )
-    
-        # When model changes, refresh defaults once (but allow user overrides after)
-    
-
-    # Run the refresh when selection changed this render
-    if model_name != st.session_state.get("_last_model", None):
-        refresh_chunking_defaults(selected_models)
-    st.session_state._last_model = model_name
-
-    chunk_size = st.slider(
-        "Chunk size (tokens)",
-        min_value=MIN_CHUNK,
-        max_value=min(MAX_CHUNK, selected_models[model_name]["context"]),
-        step=128,
-        key="chunk_size",
-        on_change=on_chunk_change,
-        disabled=busy()
-        # help="Target tokens per chunk (we default to ~60% of the model's context)."
-    )
-
-    overlap = st.slider(
-        "Overlap (tokens)",
-        min_value=0,
-        max_value=int(chunk_size * 0.5),
-        step=64,
-        key="overlap",
-        disabled=busy()
-        # help="Carry-over tokens from the tail of the previous chunk (defaults ~12% of chunk)."
-    )
-
-    strategy = st.selectbox(
-        "Chunking strategy",
-        options=["map-only", "map-reduce", "map-refine"],
-        key="strategy",
-        help=(
-            "map-only: concat per-chunk summaries\n"
-            "map-reduce: combine summaries in a final pass (robust default)\n"
-            "map-refine: iterative refinement, preserves details"
-        ),
-        disabled=busy()
-    )
+sidebar_settings = render_sidebar()
 
 
 main = st.container(horizontal_alignment="center")
@@ -496,8 +426,7 @@ with col_main2:
 if st.session_state.busy_file and 'progress_bar' in locals():
     with file_tab:
         try:
-            _summarize_files(files, progress_bar, model_name, use_local, file_summary_length, file_format_choice, file_tone_choice, file_focus_tags, 
-                             strategy, chunk_size, overlap)
+            _summarize_files(files, progress_bar, sidebar_settings, file_summary_length, file_format_choice, file_tone_choice, file_focus_tags)
         except Exception as e:
             st.error(f"failed while summarizing files: {e}")
         finally:
@@ -506,8 +435,7 @@ if st.session_state.busy_file and 'progress_bar' in locals():
 elif st.session_state.busy_web:
     with url_tab:
         try:
-            st.session_state.results_website_summary = _summarize_website(url, model_name, use_local, url_summary_length, web_format_choice, web_tone_choice, web_focus_tags,
-                                                                        strategy, chunk_size, overlap)
+            st.session_state.results_website_summary = _summarize_website(url, sidebar_settings, url_summary_length, web_format_choice, web_tone_choice, web_focus_tags)
         except Exception as e:
             st.error(f"failed while summarizing website: {e}")
         finally:
