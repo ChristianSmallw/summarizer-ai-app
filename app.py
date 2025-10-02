@@ -1,16 +1,16 @@
 import streamlit as st
-from sidebar import render_sidebar
+from ui.sidebar import render_sidebar
 from utils.summarizer import extract_text_from_url, summarize_text
 from utils.text_io import extract_text_from_bytes
 from core.chunking import summarize_in_chunks, token_mode, should_chunk
 from core.prompts import *
 from core.types import ModelSettings
 from ui.state import init_session_state, busy
+from ui.output import display_website_summary, display_summary_df, display_master_summary
 import pandas as pd
 import time
 import os
-from io import BytesIO
-import zipfile
+
 
 def _summarize_website(url: str, model_settings: ModelSettings,length_choice: str, format_choice: str, tone_choice: str, focus_tags: list[str]) -> str:
     st.session_state.sel_idx = None
@@ -43,7 +43,6 @@ def _summarize_website(url: str, model_settings: ModelSettings,length_choice: st
                 summary = summarize_text(article_text, model_settings.model_name, model_settings.use_local, prompt=build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags))
             st.session_state.busy_web = False
             return summary
-        
     
 
 def _summarize_files(files, progress_bar, model_settings: ModelSettings, length_choice: str, format_choice: str, tone_choice: str, focus_tags: list[str]):
@@ -162,101 +161,6 @@ def _summarize_files(files, progress_bar, model_settings: ModelSettings, length_
 
     if st.session_state.enable_individual:
         st.session_state.results_df = pd.DataFrame(files_data)
-
-def _display_website_summary():
-    st.subheader("📝 Website Summary")
-    st.write(st.session_state.results_website_summary)
-    st.download_button(
-    "⬇️ Download Website Summary",
-    (st.session_state.results_website_summary or "").encode("utf-8"),
-    file_name=f"website_summary.txt",
-    width='stretch',
-    key=f"dl_website_summary",
-    disabled=busy(),
-    )
-
-def _display_summary_df():
-
-    summary_header_col1, summary_header_col2 = st.columns([0.50,0.50    ])
-
-    with summary_header_col1:
-        st.subheader("📝 All Summary Files")
-
-    with summary_header_col2:
-        mem_zip = BytesIO()
-        with zipfile.ZipFile(mem_zip, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
-            for r in st.session_state.results_df.itertuples(index=False):
-                filename, ext = os.path.splitext(getattr(r, "file"))
-                safe = filename.replace("/", "_")
-                zf.writestr(f"{safe}__summary.txt", getattr(r, "summary"))
-            if st.session_state.results_master_summary:
-                zf.writestr("MASTER_SUMMARY.txt", st.session_state.results_master_summary)
-        mem_zip.seek(0)
-        st.download_button("⬇️ Download all summaries (ZIP📦)", 
-                        data=mem_zip, 
-                        file_name="summaries.zip", 
-                        mime="application/zip",
-                        width='stretch',
-                        disabled=busy())
-
-    left, right = st.columns([0.12, 0.88])
-    with left:
-        st.markdown("**✅ Select**")
-    with right:
-        st.caption("Tick a row, then see details below.")
-
-    #display files in dataframe
-    event = st.dataframe(
-        st.session_state.results_df[["file","type","size","preview"]],
-        hide_index=True,
-        width='stretch',
-        on_select="ignore" if busy() else "rerun",      
-        #on_select="rerun",                
-        selection_mode="single-row", 
-        key="results_table"
-    )
-
-    #reset selected index if out of bounds
-    if st.session_state.sel_idx is not None and st.session_state.sel_idx >= len(st.session_state.results_df):
-        st.session_state.sel_idx = None
-
-    #Prevent reading from no results
-    # if busy():
-    #     return
-
-    # 2) Read the selection dict safely
-    if not busy():
-        rows = (event or {}).get("selection", {}).get("rows", [])
-        st.session_state.sel_idx = rows[0] if rows else st.session_state.sel_idx
-
-    # 3) Show expander if we have a selected index
-    if st.session_state.sel_idx is not None and 0 <= st.session_state.sel_idx < len(st.session_state.results_df):
-        row = st.session_state.results_df.iloc[st.session_state.sel_idx]
-        filename, ext = os.path.splitext(row["file"])
-        with st.expander(f"Summary — {row['file']}", expanded=True):
-            st.write(row["summary"])
-            st.download_button(
-            "⬇️ Download Summary",
-            (row["summary"] or "").encode("utf-8"),
-            file_name=f"{filename}_summary.txt",
-            width='stretch',
-            key=f"dl_{filename}_summary",
-            disabled=busy()
-    )
-    else:
-        st.info("Click a row to view its full summary.")
-
-def _display_master_summary():
-    st.subheader("📝 Overall Summary")
-    st.write(st.session_state.results_master_summary)
-    st.download_button(
-    "⬇️ Download Overall Summary",
-    (st.session_state.results_master_summary or "").encode("utf-8"),
-    file_name=f"OVERALL_SUMMARY.txt",
-    width='stretch',
-    key=f"dl_overall_summary",
-    disabled=busy()
-    )
 
 #Initialize default values for all session state keys
 init_session_state()
@@ -398,21 +302,21 @@ with col_main2:
             if has_website_summary:
                 (tab_web,) = st.tabs(["Website Summary"])
                 with tab_web:
-                    _display_website_summary()
+                    display_website_summary()
             elif has_individual and has_master:
                 tab_individual, tab_master = st.tabs(["Individual Summaries", "Overall Summary"])
                 with tab_individual:
-                    _display_summary_df()
+                    display_summary_df()
                 with tab_master:
-                    _display_master_summary()
+                    display_master_summary()
             elif has_individual:
                 (tab_individual,) = st.tabs(["Individual Summaries"])
                 with tab_individual:
-                    _display_summary_df()
+                    display_summary_df()
             elif has_master:
                 (tab_master,) = st.tabs(["Overall Summary"])
                 with tab_master:
-                    _display_master_summary()
+                    display_master_summary()
     else:
         with st.container(height=container_height, border=True, horizontal_alignment="center", horizontal=True,vertical_alignment="center"):
             with st.container(width=400):
@@ -423,7 +327,7 @@ with col_main2:
 
 #Execute Summarizing
 
-if st.session_state.busy_file and 'progress_bar' in locals():
+if st.session_state.busy_file:
     with file_tab:
         try:
             _summarize_files(files, progress_bar, sidebar_settings, file_summary_length, file_format_choice, file_tone_choice, file_focus_tags)
