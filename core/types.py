@@ -1,12 +1,22 @@
 # core/types.py
 from __future__ import annotations
 from dataclasses import dataclass
-# from enum import Enum
+from enum import Enum
 
 # class Strategy(str, Enum):
 #     MAP_ONLY   = "map-only"
 #     MAP_REDUCE = "map-reduce"
 #     MAP_REFINE = "map-refine"
+
+class ErrorSection(Enum):
+    FILE = 1
+    URL = 2
+
+class ToastType(Enum):
+    NONE = 0
+    SUCCESS = 1
+    ERROR = 2
+
 
 @dataclass
 class ModelSettings:
@@ -16,6 +26,7 @@ class ModelSettings:
     overlap: int
     strategy: str
 
+@dataclass
 class PromptSettings:
     length_choice: str 
     format_choice: str 

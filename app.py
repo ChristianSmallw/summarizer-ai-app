@@ -4,8 +4,8 @@ from utils.summarizer import extract_text_from_url, summarize_text
 from utils.text_io import extract_text_from_bytes
 from core.chunking import summarize_in_chunks, token_mode, should_chunk
 from core.prompts import *
-from core.types import ModelSettings
-from ui.state import init_session_state, busy
+from core.types import ModelSettings, ErrorSection, ToastType
+from ui.state import init_session_state, busy, push_error, display_error, clear_error, display_toast
 from ui.output import display_website_summary, display_summary_df, display_master_summary
 import pandas as pd
 import time
@@ -153,9 +153,9 @@ def _summarize_files(files, progress_bar, model_settings: ModelSettings, length_
         progress_bar.progress(progress / progress_steps, text="Overall summary complete")
 
     progress_bar.progress(1.0, text="✅ Done")
-    time.sleep(0.5)
-    progress_bar.empty()
     st.toast(f"✅ Finished Summarizing all {file_count} files.")
+    time.sleep(1)
+    progress_bar.empty()
     st.session_state.sel_idx = None
     st.session_state.results_website_summary = None
 
@@ -233,6 +233,7 @@ with file_tab:
     
     if file_summarize_btn and files and (st.session_state.enable_individual or st.session_state.enable_master or file_count == 1):
         st.session_state.busy_file = True
+        clear_error(ErrorSection.FILE)
         st.rerun()
     elif st.session_state.busy_file:
         progress_col1, progress_col2 = st.columns([0.80,0.20])
@@ -252,6 +253,8 @@ with file_tab:
         st.warning("Please check atleast one of the summary options.")
     elif file_count == 0:
         st.warning("Please Select files to summarize above.")
+
+    display_error(ErrorSection.FILE)
         
 #Website Summarizer Tab
 
@@ -280,10 +283,13 @@ with url_tab:
                     key="web_focus_tags",
                     disabled=busy())
     url_summarize_btn = st.button("Summarize Website", disabled=busy())
+    display_error(ErrorSection.URL)
+
     if url_summarize_btn and not url.strip():
         st.warning("Please enter a valid URL.")
     elif url_summarize_btn and url.strip():
         st.session_state.busy_web = True
+        clear_error(ErrorSection.URL)
         st.rerun()
 
 
@@ -324,6 +330,7 @@ with col_main2:
                 st.markdown("### Waiting for input...")
                 st.caption("Your generated summary will appear here once ready.")
 
+display_toast()
 
 #Execute Summarizing
 
@@ -331,8 +338,9 @@ if st.session_state.busy_file:
     with file_tab:
         try:
             _summarize_files(files, progress_bar, sidebar_settings, file_summary_length, file_format_choice, file_tone_choice, file_focus_tags)
+            st.session_state.error_toast = ToastType.SUCCESS
         except Exception as e:
-            st.error(f"failed while summarizing files: {e}")
+            push_error(f"Failed while summarizing files.", ErrorSection.FILE, e)
         finally:
             st.session_state.busy_file = False
             st.rerun()
@@ -340,8 +348,9 @@ elif st.session_state.busy_web:
     with url_tab:
         try:
             st.session_state.results_website_summary = _summarize_website(url, sidebar_settings, url_summary_length, web_format_choice, web_tone_choice, web_focus_tags)
+            st.session_state.error_toast = ToastType.SUCCESS
         except Exception as e:
-            st.error(f"failed while summarizing website: {e}")
+            push_error(f"Failed while summarizing website.", ErrorSection.URL, e)
         finally:
             st.session_state.busy_web = False
             st.rerun()

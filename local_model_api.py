@@ -37,6 +37,10 @@ class SumReq(BaseModel):
     model: str = "qwen3:32b"  # example; change to what you run
     temperature: float = 0.2
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 @app.post("/summarize")
 def summarize(req: SumReq):
     # simple bearer check
