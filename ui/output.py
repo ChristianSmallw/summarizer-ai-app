@@ -2,6 +2,7 @@ import streamlit as st
 from ui.state import busy
 from io import BytesIO
 import zipfile
+import os
 
 def display_website_summary():
     st.subheader("📝 Website Summary")

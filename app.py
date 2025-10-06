@@ -1,5 +1,6 @@
 import streamlit as st
 from ui.sidebar import render_sidebar
+from ui.prompt_controls import render_prompt_controls
 from core.types import ModelSettings, ErrorSection, ToastType
 from ui.state import init_session_state, busy, push_error, display_error, clear_error, display_toast
 from ui.summarization_controller import summarize_website, summarize_files
@@ -40,32 +41,10 @@ with file_tab:
                                 type=["txt", "md", "log", "json", "csv", "html", "htm", "pdf", "docx"],
                                 accept_multiple_files=True,
                                 disabled=busy())
-        with st.container():
-
-            file_summary_length = st.selectbox(
-                                    "Select summary length:",
-                                    ["Short (2-3 sentences)", "Medium (1-2 paragraphs)", "Detailed (longer summary)"], 
-                                    key="file_summary_length",
-                                    disabled=busy()
-                                    )
     file_count = len(files)
 
 
-    with st.container(horizontal=True):
-        file_tone_choice = st.selectbox("Tone/Voice", 
-                                     ["Neutral","Executive","Technical","Friendly","Persuasive"],
-                                    key="file_tone_choice",
-                                    disabled=busy())
-        file_format_choice = st.selectbox("Format", 
-                                     ["Paragraphs","Bullets","Headings + bullets","Q&A","Table (when possible)"],
-                                    key="file_format_choice",
-                                    disabled=busy())
-        file_focus_tags = st.multiselect("Focus (optional)", 
-                                    ["Key points","Action items","Pros/Cons","Risks","Entities & facts","Numbers & metrics","Quotes", "Vibe"], 
-                                    #default=["Key points","Action items"],
-                                    key="file_focus_tags",
-                                    disabled=busy()
-                                    )
+    prompt_settings = render_prompt_controls("file")
 
     with st.container(horizontal=True):
         file_summarize_btn = st.button(f"Summarize File" + ("s" if file_count > 1 else ""), disabled=(file_count == 0) or busy())
@@ -88,29 +67,10 @@ with file_tab:
 #Website Summarizer Tab
 
 with url_tab:
-    with st.container(horizontal=True):
-        url = st.text_input(label="Enter URL:", disabled=busy())
-        url_summary_length = st.selectbox(
-                    "Select summary length:",
-                    ["Short (2-3 sentences)", "Medium (1-2 paragraphs)", "Detailed (longer summary)"], 
-                    key="url_summary_length",
-                    disabled=busy()
-                    )
-    with st.container(horizontal=True):
+    url = st.text_input(label="Enter URL:", disabled=busy())
 
-        web_tone_choice = st.selectbox("Tone/Voice",
-                                     ["Neutral","Executive","Technical","Friendly","Persuasive"],
-                                    key="web_tone_choice",
-                                    disabled=busy())
-        web_format_choice = st.selectbox("Format", 
-                                     ["Paragraphs","Bullets","Headings + bullets","Q&A","Table (when possible)"],
-                                    key="web_format_choice",
-                                    disabled=busy())
-        web_focus_tags = st.multiselect("Focus (optional)", 
-                    ["Key points","Action items","Pros/Cons","Risks","Entities & facts","Numbers & metrics","Quotes", "Vibe"], 
-                    #default=["Key points","Action items"],
-                    key="web_focus_tags",
-                    disabled=busy())
+    prompt_settings = render_prompt_controls("url")
+    
     url_summarize_btn = st.button("Summarize Website", disabled=busy())
     display_error(ErrorSection.URL)
 
@@ -153,7 +113,8 @@ with col_main2:
                 with tab_master:
                     display_master_summary()
     else:
-        with st.container(height=container_height, border=True, horizontal_alignment="center", horizontal=True,vertical_alignment="center"):
+        with st.container(height=container_height, border=True, horizontal_alignment="center", 
+                          horizontal=True,vertical_alignment="center"):
             with st.container(width=400):
                 st.image("assets/summary_placeholder.svg", width=300)
                 st.markdown("### Waiting for input...")
@@ -166,7 +127,7 @@ display_toast()
 if st.session_state.busy_file:
     with file_tab:
         try:
-            summarize_files(files, sidebar_settings, file_summary_length, file_format_choice, file_tone_choice, file_focus_tags)
+            summarize_files(files, sidebar_settings, prompt_settings)
         except Exception as e:
             push_error(f"Failed while summarizing files.", ErrorSection.FILE, e)
         finally:
@@ -175,7 +136,7 @@ if st.session_state.busy_file:
 elif st.session_state.busy_web:
     with url_tab:
         try:
-            st.session_state.results_website_summary = summarize_website(url, sidebar_settings, url_summary_length, web_format_choice, web_tone_choice, web_focus_tags)
+            st.session_state.results_website_summary = summarize_website(url, sidebar_settings, prompt_settings)
         except Exception as e:
             push_error(f"Failed while summarizing website.", ErrorSection.URL, e)
         finally:

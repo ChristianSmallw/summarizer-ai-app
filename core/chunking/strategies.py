@@ -3,15 +3,12 @@ from __future__ import annotations
 from .packer import chunk_text
 from core.prompts import build_prompt
 from utils.summarizer import summarize_text
-from core.types import ModelSettings
+from core.types import ModelSettings, PromptSettings
 
 def summarize_in_chunks(
     full_text: str,
     model_settings: ModelSettings,
-    length_choice: str,
-    format_choice: str,
-    tone_choice: str,
-    focus_tags: list[str]
+    prompt_settings: PromptSettings
 ) -> str:
     
     if model_settings.chunk_size is None or model_settings.overlap is None:
@@ -22,7 +19,11 @@ def summarize_in_chunks(
         return ""
 
     n = len(chunks)
-    map_prompt = build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags)
+    map_prompt = build_prompt("Individual", 
+                              prompt_settings.summary_length, 
+                              prompt_settings.format_choice, 
+                              prompt_settings.tone_choice, 
+                              prompt_settings.focus_tags)
 
     # MAP
     per_chunk = []
@@ -47,7 +48,11 @@ def summarize_in_chunks(
         return running
 
     # map-reduce (default)
-    reduce_prompt = build_prompt("Overall", length_choice, format_choice, tone_choice, focus_tags)
+    reduce_prompt = build_prompt("Overall", 
+                              prompt_settings.summary_length, 
+                              prompt_settings.format_choice, 
+                              prompt_settings.tone_choice, 
+                              prompt_settings.focus_tags)
     combined = "\n\n".join(f"- Chunk {i+1}:\n{cs}" for i, cs in enumerate(per_chunk))
     payload = f"Combine these chunk summaries into a cohesive overall summary:\n\n{combined}\n"
     return summarize_text(payload, model_settings.model_name, model_settings.use_local, reduce_prompt)

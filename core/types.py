@@ -29,7 +29,7 @@ class ModelSettings:
 
 @dataclass
 class PromptSettings:
-    length_choice: str 
+    summary_length: str 
     format_choice: str 
     tone_choice: str 
     focus_tags: list[str]

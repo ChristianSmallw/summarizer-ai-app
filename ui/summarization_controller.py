@@ -3,12 +3,12 @@ from core.prompts import build_prompt
 from utils.summarizer import extract_text_from_url, summarize_text
 from utils.text_io import extract_text_from_bytes
 from core.chunking import summarize_in_chunks, should_chunk
-from core.types import ModelSettings, ErrorSection, ToastType
+from core.types import ModelSettings, PromptSettings, ErrorSection, ToastType
 from ui.state import push_error
 import pandas as pd
 import time
 
-def summarize_website(url: str, model_settings: ModelSettings,length_choice: str, format_choice: str, tone_choice: str, focus_tags: list[str]) -> str:
+def summarize_website(url: str, model_settings: ModelSettings, prompt_settings: PromptSettings) -> str:
     st.session_state.sel_idx = None
     st.session_state.results_df = pd.DataFrame()
     st.session_state.results_master_summary = None
@@ -41,24 +41,31 @@ def summarize_website(url: str, model_settings: ModelSettings,length_choice: str
             summary = summarize_in_chunks(
                 full_text=article_text,
                 model_settings=model_settings,
-                length_choice=length_choice,
-                format_choice=format_choice,
-                tone_choice=tone_choice,
-                focus_tags=focus_tags
+                prompt_settings=prompt_settings
             )
         else:
-            summary = summarize_text(article_text, model_settings.model_name, model_settings.use_local, prompt=build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags))
+            prompt = build_prompt("Individual", 
+                        prompt_settings.summary_length, 
+                        prompt_settings.format_choice, 
+                        prompt_settings.tone_choice, 
+                        prompt_settings.focus_tags)
+
+            summary = summarize_text(article_text, 
+                                     model_settings.model_name, 
+                                     model_settings.use_local, 
+                                     prompt=prompt)
 
         st.session_state.busy_web = False
         st.session_state.error_toast = ToastType.SUCCESS
         progress_bar.progress(1.0, text="✅ Done")
         st.toast(f"✅ Finished Summarizing website")
-        time.sleep(1)
+        time.sleep(0.5)
         progress_bar.empty()
 
         return summary
+
             
-def summarize_files(files, model_settings: ModelSettings, length_choice: str, format_choice: str, tone_choice: str, focus_tags: list[str]):
+def summarize_files(files, model_settings: ModelSettings, prompt_settings: PromptSettings):
 
     progress_col1, progress_col2 = st.columns([0.80,0.20])
 
@@ -122,13 +129,19 @@ def summarize_files(files, model_settings: ModelSettings, length_choice: str, fo
                 summary = summarize_in_chunks(
                     full_text=text,
                     model_settings=model_settings,
-                    length_choice=length_choice,
-                    format_choice=format_choice,
-                    tone_choice=tone_choice,
-                    focus_tags=focus_tags
+                    prompt_settings=prompt_settings
                 )
             else:
-                summary = summarize_text(text, model_settings.model_name, model_settings.use_local, prompt=build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags))
+                prompt = build_prompt("Individual", 
+                                      prompt_settings.summary_length, 
+                                      prompt_settings.format_choice, 
+                                      prompt_settings.tone_choice, 
+                                      prompt_settings.focus_tags)
+
+                summary = summarize_text(text, 
+                                         model_settings.model_name, 
+                                         model_settings.use_local, 
+                                         prompt=prompt)
 
             files_data.append({
                 "file": meta["filename"],
@@ -151,20 +164,26 @@ def summarize_files(files, model_settings: ModelSettings, length_choice: str, fo
             st.session_state.results_master_summary = summarize_in_chunks(
                 full_text=master_summary_prompt,
                 model_settings=model_settings,
-                length_choice=length_choice,
-                format_choice=format_choice,
-                tone_choice=tone_choice,
-                focus_tags=focus_tags
+                prompt_settings=prompt_settings
             )
         else:
-            st.session_state.results_master_summary = summarize_text(master_summary_prompt, model_settings.model_name, model_settings.use_local, prompt=build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags))
+            prompt = build_prompt("Individual", 
+                                  prompt_settings.summary_length, 
+                                  prompt_settings.format_choice, 
+                                  prompt_settings.tone_choice, 
+                                  prompt_settings.focus_tags)
+
+            st.session_state.results_master_summary = summarize_text(master_summary_prompt, 
+                                                                     model_settings.model_name, 
+                                                                     model_settings.use_local, 
+                                                                     prompt=prompt)
 
         progress += 1
         progress_bar.progress(progress / progress_steps, text="Overall summary complete")
 
     progress_bar.progress(1.0, text="✅ Done")
     st.toast(f"✅ Finished Summarizing all {file_count} files.")
-    time.sleep(1)
+    time.sleep(0.5)
     progress_bar.empty()
     st.session_state.sel_idx = None
     st.session_state.results_website_summary = None
