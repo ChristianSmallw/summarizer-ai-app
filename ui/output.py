@@ -16,6 +16,18 @@ def display_website_summary():
     disabled=busy(),
     )
 
+def display_text_summary():
+    st.subheader("📝 Text Summary")
+    st.write(st.session_state.results_text_summary)
+    st.download_button(
+    "⬇️ Download Text Summary",
+    (st.session_state.results_text_summary or "").encode("utf-8"),
+    file_name=f"text_summary.txt",
+    width='stretch',
+    key=f"dl_text_summary",
+    disabled=busy(),
+    )
+
 def display_summary_df():
 
     summary_header_col1, summary_header_col2 = st.columns([0.50,0.50    ])

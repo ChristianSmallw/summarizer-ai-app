@@ -11,6 +11,7 @@ from enum import Enum
 class ErrorSection(Enum):
     FILE = 1
     URL = 2
+    TEXT = 3
 
 class ToastType(Enum):
     NONE = 0

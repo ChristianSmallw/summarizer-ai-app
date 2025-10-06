@@ -2,8 +2,8 @@ import streamlit as st
 from ui.sidebar import render_sidebar
 from ui.prompt_controls import render_prompt_controls
 from ui.state import init_session_state, busy, push_error, display_error, clear_error, display_toast
-from ui.summarization_controller import summarize_website, summarize_files
-from ui.output import display_website_summary, display_summary_df, display_master_summary
+from ui.summarization_controller import summarize_website, summarize_files, summarize_user_text
+from ui.output import display_website_summary, display_summary_df, display_master_summary, display_text_summary
 from core.types import ErrorSection
 
 #Initialize default values for all session state keys
@@ -30,7 +30,7 @@ with col_main1:
     left_input = st.container(height=container_height, border=True)
 
 with left_input:
-    file_tab, url_tab = st.tabs(["📁 File Upload", "🔗 URL"])
+    file_tab, url_tab, text_tab = st.tabs(["📁 File Upload", "🔗 URL", "📄 Text"])
 
 #File Summarizer Tab
 
@@ -71,27 +71,51 @@ with url_tab:
     url_prompt_settings = render_prompt_controls("url")
     
     url_summarize_btn = st.button("Summarize Website", disabled=busy())
-    display_error(ErrorSection.URL)
 
-    if url_summarize_btn and not url.strip():
-        st.warning("Please enter a valid URL.")
-    elif url_summarize_btn and url.strip():
+    if url_summarize_btn and url.strip():
         st.session_state.busy_web = True
         clear_error(ErrorSection.URL)
         st.rerun()
+    elif url_summarize_btn and not url.strip():
+        st.warning("Please enter a valid URL.")
+
+    display_error(ErrorSection.URL)
+
+with text_tab:
+    user_text = st.text_area(label="Enter text to summarize:", height=300, disabled=busy())
+
+    text_prompt_settings = render_prompt_controls("text")
+
+    text_summarize_btn = st.button("Summarize Text", disabled=busy())
+
+    is_acceptable_length = len(user_text) >= 50
+
+    if text_summarize_btn and user_text.strip() and is_acceptable_length:
+        st.session_state.busy_text = True
+        clear_error(ErrorSection.TEXT)
+        st.rerun()
+    elif text_summarize_btn and not user_text.strip():
+        st.warning("Please enter some text to summarize above.")
+    elif text_summarize_btn and not is_acceptable_length:
+        st.warning("Please enter at least 50 characters of text to summarize.")
+        
+    
+    display_error(ErrorSection.TEXT)
+
 
 
 
 has_individual = not st.session_state.results_df.empty
 has_master = bool(st.session_state.results_master_summary)
 has_website_summary = bool(st.session_state.results_website_summary)
+has_text_summary = bool(st.session_state.results_text_summary)
 
 #Results Panel
 
 with col_main2:
     st.header('🧾 Generated Summaries')
 
-    if has_website_summary or has_individual or has_master:
+    if has_website_summary or has_individual or has_master or has_text_summary:
         with st.container(height=container_height, border=True):
             if has_website_summary:
                 (tab_web,) = st.tabs(["Website Summary"])
@@ -111,6 +135,10 @@ with col_main2:
                 (tab_master,) = st.tabs(["Overall Summary"])
                 with tab_master:
                     display_master_summary()
+            elif has_text_summary:
+                (tab_text,) = st.tabs(["Text Summary"])
+                with tab_text:
+                    display_text_summary()
     else:
         with st.container(height=container_height, border=True, horizontal_alignment="center", 
                           horizontal=True,vertical_alignment="center"):
@@ -144,4 +172,15 @@ elif st.session_state.busy_web:
                        ErrorSection.URL, e)
         finally:
             st.session_state.busy_web = False
+            st.rerun()
+elif st.session_state.busy_text:
+    with text_tab:
+        try:
+            st.session_state.results_text_summary = summarize_user_text(user_text, sidebar_settings, text_prompt_settings)
+        except Exception as e:
+            push_error(f"Failed while summarizing text." + 
+                       " The local model API is likely offline, please try again later." if sidebar_settings.use_local else "",
+                       ErrorSection.TEXT, e)
+        finally:
+            st.session_state.busy_text = False
             st.rerun()

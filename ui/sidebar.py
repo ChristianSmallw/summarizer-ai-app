@@ -40,9 +40,6 @@ def render_sidebar() -> ModelSettings:
             temperature = st.slider("Temperature", 0.0, 1.0, 0.2,
                         key="temperature",
                         disabled=busy())
-        
-            # When model changes, refresh defaults once (but allow user overrides after)
-        
 
         # Run the refresh when selection changed this render
         if model_name != st.session_state.get("_last_model", None):
@@ -58,8 +55,8 @@ def render_sidebar() -> ModelSettings:
             step=128,
             key="chunk_size",
             on_change=on_chunk_change,
-            disabled=busy()
-            # help="Target tokens per chunk (we default to ~60% of the model's context)."
+            disabled=busy(),
+            help="Target tokens per chunk (default to ~60% of the model's context)."
         )
 
         overlap = st.slider(
@@ -68,8 +65,8 @@ def render_sidebar() -> ModelSettings:
             max_value=int(chunk_size * 0.5),
             step=64,
             key="overlap",
-            disabled=busy()
-            # help="Carry-over tokens from the tail of the previous chunk (defaults ~12% of chunk)."
+            disabled=busy(),
+            help="Carry-over tokens from the tail of the previous chunk (defaults ~12% of chunk)."
         )
 
         strategy = st.selectbox(

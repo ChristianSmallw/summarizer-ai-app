@@ -8,10 +8,68 @@ from ui.state import push_error
 import pandas as pd
 import time
 
-def summarize_website(url: str, model_settings: ModelSettings, prompt_settings: PromptSettings) -> str:
-    st.session_state.sel_idx = None
+
+def summarize_user_text(text: str, model_settings: ModelSettings, prompt_settings: PromptSettings) -> str:
+
+    st.session_state.backup_results_website_summary = st.session_state.results_website_summary
+    st.session_state.backup_results_df = st.session_state.results_df.copy(deep=True)
+    st.session_state.backup_results_master_summary = st.session_state.results_master_summary
+    st.session_state.backup_results_text_summary = st.session_state.results_text_summary
+
+    st.session_state.results_website_summary = None
     st.session_state.results_df = pd.DataFrame()
     st.session_state.results_master_summary = None
+    st.session_state.results_text_summary = None
+
+    progress_col1, progress_col2 = st.columns([0.80,0.20])
+
+    with progress_col1:
+        progress_bar = st.progress(0.0 ,text=f"Preparing summarization…")
+    with progress_col2:
+        if st.button("Cancel"):
+            st.session_state.busy_text = False
+            st.session_state.results_website_summary = st.session_state.backup_results_website_summary
+            st.session_state.results_df = st.session_state.backup_results_df
+            st.session_state.results_master_summary = st.session_state.backup_results_master_summary
+            st.session_state.results_text_summary = st.session_state.backup_results_text_summary
+            st.session_state.error_toast = ToastType.CANCEL
+            st.rerun()
+
+    use_chunking = should_chunk(len(text), model_settings.chunk_size)
+
+    progress_bar.progress(0.5, text="Summarizing Text…")
+
+    if use_chunking:
+        summary = summarize_in_chunks(
+            full_text=text,
+            model_settings=model_settings,
+            prompt_settings=prompt_settings
+        )
+    else:
+        summary = summarize_text(text, 
+                                model_settings=model_settings,
+                                prompt=build_prompt("Individual", prompt_settings))
+
+    st.session_state.busy_text = False
+    st.session_state.error_toast = ToastType.SUCCESS
+    progress_bar.progress(1.0, text="✅ Done")
+    st.toast(f"✅ Finished Summarizing text")
+    time.sleep(0.5)
+    progress_bar.empty()
+
+    return summary
+
+def summarize_website(url: str, model_settings: ModelSettings, prompt_settings: PromptSettings) -> str:
+
+    st.session_state.backup_results_website_summary = st.session_state.results_website_summary
+    st.session_state.backup_results_df = st.session_state.results_df.copy(deep=True)
+    st.session_state.backup_results_master_summary = st.session_state.results_master_summary
+    st.session_state.backup_results_text_summary = st.session_state.results_text_summary
+
+    st.session_state.results_website_summary = None
+    st.session_state.results_df = pd.DataFrame()
+    st.session_state.results_master_summary = None
+    st.session_state.results_text_summary = None
 
     progress_col1, progress_col2 = st.columns([0.80,0.20])
 
@@ -23,6 +81,7 @@ def summarize_website(url: str, model_settings: ModelSettings, prompt_settings: 
             st.session_state.results_website_summary = st.session_state.backup_results_website_summary
             st.session_state.results_df = st.session_state.backup_results_df
             st.session_state.results_master_summary = st.session_state.backup_results_master_summary
+            st.session_state.results_text_summary = st.session_state.backup_results_text_summary
             st.session_state.error_toast = ToastType.CANCEL
             st.rerun()
 
@@ -45,7 +104,7 @@ def summarize_website(url: str, model_settings: ModelSettings, prompt_settings: 
             )
         else:
             summary = summarize_text(article_text, 
-                                     model_settings=model_settings, 
+                                     model_settings=model_settings,
                                      prompt=build_prompt("Individual", prompt_settings))
 
         st.session_state.busy_web = False
@@ -60,6 +119,16 @@ def summarize_website(url: str, model_settings: ModelSettings, prompt_settings: 
             
 def summarize_files(files, model_settings: ModelSettings, prompt_settings: PromptSettings):
 
+    st.session_state.backup_results_website_summary = st.session_state.results_website_summary
+    st.session_state.backup_results_df = st.session_state.results_df.copy(deep=True)
+    st.session_state.backup_results_master_summary = st.session_state.results_master_summary
+    st.session_state.backup_results_text_summary = st.session_state.results_text_summary
+
+    st.session_state.results_website_summary = None
+    st.session_state.results_df = pd.DataFrame()
+    st.session_state.results_master_summary = None
+    st.session_state.results_text_summary = None
+
     progress_col1, progress_col2 = st.columns([0.80,0.20])
 
     with progress_col1:
@@ -70,19 +139,13 @@ def summarize_files(files, model_settings: ModelSettings, prompt_settings: Promp
             st.session_state.results_website_summary = st.session_state.backup_results_website_summary
             st.session_state.results_df = st.session_state.backup_results_df
             st.session_state.results_master_summary = st.session_state.backup_results_master_summary
+            st.session_state.results_text_summary = st.session_state.backup_results_text_summary
             st.session_state.error_toast = ToastType.CANCEL
             st.rerun()
 
     file_count = len(files)
     files_data = []
     master_summary_prompt = ""
-    st.session_state.backup_results_website_summary = st.session_state.results_website_summary
-    st.session_state.backup_results_df = st.session_state.results_df.copy(deep=True)
-    st.session_state.backup_results_master_summary = st.session_state.results_master_summary
-
-    st.session_state.results_website_summary = None
-    st.session_state.results_df = pd.DataFrame()
-    st.session_state.results_master_summary = None
 
     if file_count == 1:
         st.session_state.enable_individual = False

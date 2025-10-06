@@ -2,7 +2,6 @@ from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import OpenAI
-import os
 
 client = OpenAI(
     base_url="http://localhost:11434/v1",
@@ -43,9 +42,6 @@ def health():
 
 @app.post("/summarize")
 def summarize(req: SumReq):
-    # simple bearer check
-    # if API_TOKEN and authorization != f"Bearer {API_TOKEN}":
-    #     raise HTTPException(status_code=401, detail="Unauthorized")
 
     if not req.text or len(req.text) < 20:
         raise HTTPException(400, "text too short")

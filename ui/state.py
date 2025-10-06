@@ -10,14 +10,17 @@ def init_session_state() -> None:
 
     st.session_state.setdefault("busy_file", False)
     st.session_state.setdefault("busy_web", False)
+    st.session_state.setdefault("busy_text", False)
 
     st.session_state.setdefault("sel_idx", None)
     st.session_state.setdefault("results_df", pd.DataFrame())
     st.session_state.setdefault("results_website_summary", None)
     st.session_state.setdefault("results_master_summary", None)
+    st.session_state.setdefault("results_text_summary", None)
     st.session_state.setdefault("backup_results_df", pd.DataFrame())
     st.session_state.setdefault("backup_results_website_summary", None)
     st.session_state.setdefault("backup_results_master_summary", None)
+    st.session_state.setdefault("backup_results_text_summary", None)
 
     st.session_state.setdefault("enable_individual", True)
     st.session_state.setdefault("enable_master", False)
