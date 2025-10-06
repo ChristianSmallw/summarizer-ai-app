@@ -4,7 +4,6 @@ from bs4 import BeautifulSoup
 from openai import OpenAI
 from utils.config import get_secret
 import re
-import time
 from ftfy import fix_text
 
 OPENAI_API_KEY = get_secret("OPENAI_API_KEY")

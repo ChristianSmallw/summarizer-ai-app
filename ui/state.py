@@ -74,4 +74,6 @@ def display_toast():
             st.toast("Successfully summarized!", icon="🎉")
         case ToastType.ERROR:
             st.toast(f"Something went wrong...", icon="🤔")
+        case ToastType.CANCEL:
+            st.toast(f"Operation cancelled.", icon="✋")
     st.session_state.error_toast = ToastType.NONE

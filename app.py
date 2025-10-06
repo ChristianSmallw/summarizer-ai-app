@@ -1,166 +1,10 @@
 import streamlit as st
 from ui.sidebar import render_sidebar
-from utils.summarizer import extract_text_from_url, summarize_text
-from utils.text_io import extract_text_from_bytes
-from core.chunking import summarize_in_chunks, token_mode, should_chunk
-from core.prompts import *
 from core.types import ModelSettings, ErrorSection, ToastType
 from ui.state import init_session_state, busy, push_error, display_error, clear_error, display_toast
+from ui.summarization_controller import summarize_website, summarize_files
 from ui.output import display_website_summary, display_summary_df, display_master_summary
-import pandas as pd
-import time
 import os
-
-
-def _summarize_website(url: str, model_settings: ModelSettings,length_choice: str, format_choice: str, tone_choice: str, focus_tags: list[str]) -> str:
-    st.session_state.sel_idx = None
-    st.session_state.results_df = pd.DataFrame()
-    st.session_state.results_master_summary = None
-    with st.spinner("Fetching and summarizing..."):
-        article_text = extract_text_from_url(url)
-        if not article_text:
-            st.session_state.busy_web = False
-            st.error("Could not extract webpage content.")
-        else:
-            # Optional: skip chunking for short inputs
-            use_chunking = True
-            if token_mode():
-                # if text is tiny (e.g., < 70% of chunk size), skip chunking
-                use_chunking = should_chunk(len(article_text), model_settings.chunk_size)
-            else:
-                use_chunking = should_chunk(len(article_text), model_settings.chunk_size)
-
-            if use_chunking:
-                summary = summarize_in_chunks(
-                    full_text=article_text,
-                    model_settings=model_settings,
-                    length_choice=length_choice,
-                    format_choice=format_choice,
-                    tone_choice=tone_choice,
-                    focus_tags=focus_tags
-                )
-            else:
-                summary = summarize_text(article_text, model_settings.model_name, model_settings.use_local, prompt=build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags))
-            st.session_state.busy_web = False
-            return summary
-    
-
-def _summarize_files(files, progress_bar, model_settings: ModelSettings, length_choice: str, format_choice: str, tone_choice: str, focus_tags: list[str]):
-
-    
-    file_count = len(files)
-    files_data = []
-    master_summary_prompt = ""
-    st.session_state.backup_results_website_summary = st.session_state.results_website_summary
-    st.session_state.backup_results_df = st.session_state.results_df.copy(deep=True)
-    st.session_state.backup_results_master_summary = st.session_state.results_master_summary
-
-    st.session_state.results_website_summary = None
-    st.session_state.results_df = pd.DataFrame()
-    st.session_state.results_master_summary = None
-
-    if file_count == 1:
-        st.session_state.enable_individual = False
-        st.session_state.enable_master = True
-
-    progress_steps = file_count
-    progress = 0
-
-    if st.session_state.enable_individual:
-        progress_steps += file_count
-    if st.session_state.enable_master:
-        progress_steps += 1
-    
-    for idx, file in enumerate(files, start=1):
-
-        progress_bar.progress(progress / progress_steps, text=f"{idx}/{file_count} · {file.name} — Extracting…")
-        
-        data = file.getvalue()
-        try:
-            text, meta = extract_text_from_bytes(file.name, data)
-        except Exception as e:
-            st.error(str(e))
-            st.stop()
-        
-        master_summary_prompt += f"#{idx} {meta['filename']}:\n{text}\n\n"
-
-        progress += 1
-        progress_bar.progress(progress / progress_steps, text=f"{idx}/{file_count} · {file.name} — Extracted")
-        
-        if st.session_state.enable_individual:
-            
-            progress_bar.progress(progress / progress_steps, text=f"{idx}/{file_count} · {file.name} — Summarizing…")
-            
-            # Optional: skip chunking for short inputs
-            use_chunking = True
-            if token_mode():
-                # if text is tiny (e.g., < 70% of chunk size), skip chunking
-                use_chunking = should_chunk(len(text), model_settings.chunk_size)
-            else:
-                use_chunking = should_chunk(len(text), model_settings.chunk_size)
-
-            if use_chunking:
-                summary = summarize_in_chunks(
-                    full_text=text,
-                    model_settings=model_settings,
-                    length_choice=length_choice,
-                    format_choice=format_choice,
-                    tone_choice=tone_choice,
-                    focus_tags=focus_tags
-                )
-            else:
-                summary = summarize_text(text, model_settings.model_name, model_settings.use_local, prompt=build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags))
-
-            #prompt = build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags)
-            #summary = summarize_text(text, prompt=prompt)
-
-            files_data.append({
-                "file": meta["filename"],
-                "data": file, 
-                "type": meta["type"], 
-                "size": meta["size_bytes"],
-                "original": text,
-                "summary": summary,
-                "preview": summary[:160] + "..."
-            })
-            progress += 1
-            progress_bar.progress(progress / progress_steps, text=f"{idx}/{file_count} · {file.name} — Summarized")
-
-    if st.session_state.enable_master:
-        progress_bar.progress(progress / progress_steps, text="Building overall summary…")
-                    
-        # Optional: skip chunking for short inputs
-        use_chunking = True
-        if token_mode():
-            # if text is tiny (e.g., < 70% of chunk size), skip chunking
-            use_chunking = should_chunk(len(master_summary_prompt), model_settings.chunk_size)
-        else:
-            use_chunking = should_chunk(len(master_summary_prompt), model_settings.chunk_size)
-
-        if use_chunking:
-            st.session_state.results_master_summary = summarize_in_chunks(
-                full_text=master_summary_prompt,
-                model_settings=model_settings,
-                length_choice=length_choice,
-                format_choice=format_choice,
-                tone_choice=tone_choice,
-                focus_tags=focus_tags
-            )
-        else:
-            st.session_state.results_master_summary = summarize_text(master_summary_prompt, model_settings.model_name, sidebar_settings.use_local, prompt=build_prompt("Individual", length_choice, format_choice, tone_choice, focus_tags))
-
-        progress += 1
-        progress_bar.progress(progress / progress_steps, text="Overall summary complete")
-
-    progress_bar.progress(1.0, text="✅ Done")
-    st.toast(f"✅ Finished Summarizing all {file_count} files.")
-    time.sleep(1)
-    progress_bar.empty()
-    st.session_state.sel_idx = None
-    st.session_state.results_website_summary = None
-
-    if st.session_state.enable_individual:
-        st.session_state.results_df = pd.DataFrame(files_data)
 
 #Initialize default values for all session state keys
 init_session_state()
@@ -170,7 +14,6 @@ init_session_state()
 st.set_page_config(page_title="🤖 AI Summarizer", layout="wide")
 
 container_height = 800
-
 
 # Sidebar AI Model and chunking options
 sidebar_settings = render_sidebar()
@@ -235,20 +78,6 @@ with file_tab:
         st.session_state.busy_file = True
         clear_error(ErrorSection.FILE)
         st.rerun()
-    elif st.session_state.busy_file:
-        progress_col1, progress_col2 = st.columns([0.80,0.20])
-
-        with progress_col1:
-            progress_bar = st.progress(0.0 ,text=f"Processing Files…")
-        with progress_col2:
-            if st.button("Cancel"):
-                st.session_state.busy_file = False
-                st.session_state.results_website_summary = st.session_state.backup_results_website_summary
-                st.session_state.results_df = st.session_state.backup_results_df
-                st.session_state.results_master_summary = st.session_state.backup_results_master_summary
-                # st.toast(f"❌ Cancelled Summarizing files.")
-                st.rerun()
-
     elif not st.session_state.enable_individual and not st.session_state.enable_master:
         st.warning("Please check atleast one of the summary options.")
     elif file_count == 0:
@@ -337,8 +166,7 @@ display_toast()
 if st.session_state.busy_file:
     with file_tab:
         try:
-            _summarize_files(files, progress_bar, sidebar_settings, file_summary_length, file_format_choice, file_tone_choice, file_focus_tags)
-            st.session_state.error_toast = ToastType.SUCCESS
+            summarize_files(files, sidebar_settings, file_summary_length, file_format_choice, file_tone_choice, file_focus_tags)
         except Exception as e:
             push_error(f"Failed while summarizing files.", ErrorSection.FILE, e)
         finally:
@@ -347,11 +175,9 @@ if st.session_state.busy_file:
 elif st.session_state.busy_web:
     with url_tab:
         try:
-            st.session_state.results_website_summary = _summarize_website(url, sidebar_settings, url_summary_length, web_format_choice, web_tone_choice, web_focus_tags)
-            st.session_state.error_toast = ToastType.SUCCESS
+            st.session_state.results_website_summary = summarize_website(url, sidebar_settings, url_summary_length, web_format_choice, web_tone_choice, web_focus_tags)
         except Exception as e:
             push_error(f"Failed while summarizing website.", ErrorSection.URL, e)
         finally:
             st.session_state.busy_web = False
             st.rerun()
-

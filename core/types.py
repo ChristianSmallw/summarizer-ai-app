@@ -16,6 +16,7 @@ class ToastType(Enum):
     NONE = 0
     SUCCESS = 1
     ERROR = 2
+    CANCEL = 3
 
 
 @dataclass
