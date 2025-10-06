@@ -27,7 +27,7 @@ A **Streamlit app** that uses local or cloud AI models to summarize batch docume
 ```bash
 # 1. Clone the repo
 git clone https://github.com/ChristianSmallw/summarizer-ai-app.git
-cd ai-summarizer-app
+cd summarizer-ai-app
 
 # 2. Install dependencies
 pip install -r requirements.txt
