@@ -49,7 +49,9 @@ with file_tab:
         file_summarize_btn = st.button(f"Summarize File" + ("s" if file_count > 1 else ""), disabled=(file_count == 0) or busy())
         if file_count > 1:
             st.session_state.enable_individual = st.checkbox(label="Individual Summaries", value=True, disabled=busy())
-            st.session_state.enable_master = st.checkbox(label="Overall Summary", value=False, disabled=(file_count <= 1) or busy())
+            st.session_state.enable_master = st.checkbox(label="Master Summary", value=False,
+                                                          disabled=(file_count <= 1) or busy(),
+                                                          help="An overall summary of all files assuming all content is related.")
 
     
     if file_summarize_btn and files and (st.session_state.enable_individual or st.session_state.enable_master or file_count == 1):
@@ -122,7 +124,7 @@ with col_main2:
                 with tab_web:
                     display_website_summary()
             elif has_individual and has_master:
-                tab_individual, tab_master = st.tabs(["Individual Summaries", "Overall Summary"])
+                tab_individual, tab_master = st.tabs(["Individual Summaries", "Master Summary"])
                 with tab_individual:
                     display_summary_df()
                 with tab_master:
@@ -132,9 +134,9 @@ with col_main2:
                 with tab_individual:
                     display_summary_df()
             elif has_master:
-                (tab_master,) = st.tabs(["Overall Summary"])
+                (tab_master,) = st.tabs([f"Master Summary" if not st.session_state.results_single_file_name else "File Summary"])
                 with tab_master:
-                    display_master_summary()
+                    display_master_summary(st.session_state.results_single_file_name)
             elif has_text_summary:
                 (tab_text,) = st.tabs(["Text Summary"])
                 with tab_text:
@@ -156,8 +158,7 @@ if st.session_state.busy_file:
         try:
             summarize_files(files, sidebar_settings, file_prompt_settings)
         except Exception as e:
-            push_error(f"Failed while summarizing files." + 
-                       " The local model API is likely offline, please try again later." if sidebar_settings.use_local else "",
+            push_error(f"Failed while summarizing files.{' The local model API is likely offline, please try again later.' if sidebar_settings.use_local else ''}",
                         ErrorSection.FILE, e)
         finally:
             st.session_state.busy_file = False
@@ -167,8 +168,7 @@ elif st.session_state.busy_web:
         try:
             st.session_state.results_website_summary = summarize_website(url, sidebar_settings, url_prompt_settings)
         except Exception as e:
-            push_error(f"Failed while summarizing website." + 
-                       " The local model API is likely offline, please try again later." if sidebar_settings.use_local else "",
+            push_error(f"Failed while summarizing files.{' The local model API is likely offline, please try again later.' if sidebar_settings.use_local else ''}",
                        ErrorSection.URL, e)
         finally:
             st.session_state.busy_web = False
@@ -178,8 +178,7 @@ elif st.session_state.busy_text:
         try:
             st.session_state.results_text_summary = summarize_user_text(user_text, sidebar_settings, text_prompt_settings)
         except Exception as e:
-            push_error(f"Failed while summarizing text." + 
-                       " The local model API is likely offline, please try again later." if sidebar_settings.use_local else "",
+            push_error(f"Failed while summarizing files.{' The local model API is likely offline, please try again later.' if sidebar_settings.use_local else ''}",
                        ErrorSection.TEXT, e)
         finally:
             st.session_state.busy_text = False

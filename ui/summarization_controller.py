@@ -7,19 +7,10 @@ from core.types import ModelSettings, PromptSettings, ErrorSection, ToastType
 from ui.state import push_error
 import pandas as pd
 import time
+import os
 
 
 def summarize_user_text(text: str, model_settings: ModelSettings, prompt_settings: PromptSettings) -> str:
-
-    st.session_state.backup_results_website_summary = st.session_state.results_website_summary
-    st.session_state.backup_results_df = st.session_state.results_df.copy(deep=True)
-    st.session_state.backup_results_master_summary = st.session_state.results_master_summary
-    st.session_state.backup_results_text_summary = st.session_state.results_text_summary
-
-    st.session_state.results_website_summary = None
-    st.session_state.results_df = pd.DataFrame()
-    st.session_state.results_master_summary = None
-    st.session_state.results_text_summary = None
 
     progress_col1, progress_col2 = st.columns([0.80,0.20])
 
@@ -32,8 +23,20 @@ def summarize_user_text(text: str, model_settings: ModelSettings, prompt_setting
             st.session_state.results_df = st.session_state.backup_results_df
             st.session_state.results_master_summary = st.session_state.backup_results_master_summary
             st.session_state.results_text_summary = st.session_state.backup_results_text_summary
+            st.session_state.results_single_file_name = st.session_state.backup_results_single_file_name
             st.session_state.error_toast = ToastType.CANCEL
             st.rerun()
+
+    st.session_state.backup_results_website_summary = st.session_state.results_website_summary
+    st.session_state.backup_results_df = st.session_state.results_df.copy(deep=True)
+    st.session_state.backup_results_master_summary = st.session_state.results_master_summary
+    st.session_state.backup_results_text_summary = st.session_state.results_text_summary
+    st.session_state.backup_results_single_file_name = st.session_state.results_single_file_name
+
+    st.session_state.results_website_summary = None
+    st.session_state.results_df = pd.DataFrame()
+    st.session_state.results_master_summary = None
+    st.session_state.results_text_summary = None
 
     use_chunking = should_chunk(len(text), model_settings.chunk_size)
 
@@ -61,16 +64,6 @@ def summarize_user_text(text: str, model_settings: ModelSettings, prompt_setting
 
 def summarize_website(url: str, model_settings: ModelSettings, prompt_settings: PromptSettings) -> str:
 
-    st.session_state.backup_results_website_summary = st.session_state.results_website_summary
-    st.session_state.backup_results_df = st.session_state.results_df.copy(deep=True)
-    st.session_state.backup_results_master_summary = st.session_state.results_master_summary
-    st.session_state.backup_results_text_summary = st.session_state.results_text_summary
-
-    st.session_state.results_website_summary = None
-    st.session_state.results_df = pd.DataFrame()
-    st.session_state.results_master_summary = None
-    st.session_state.results_text_summary = None
-
     progress_col1, progress_col2 = st.columns([0.80,0.20])
 
     with progress_col1:
@@ -82,8 +75,20 @@ def summarize_website(url: str, model_settings: ModelSettings, prompt_settings: 
             st.session_state.results_df = st.session_state.backup_results_df
             st.session_state.results_master_summary = st.session_state.backup_results_master_summary
             st.session_state.results_text_summary = st.session_state.backup_results_text_summary
+            st.session_state.results_single_file_name = st.session_state.backup_results_single_file_name
             st.session_state.error_toast = ToastType.CANCEL
             st.rerun()
+
+    st.session_state.backup_results_website_summary = st.session_state.results_website_summary
+    st.session_state.backup_results_df = st.session_state.results_df.copy(deep=True)
+    st.session_state.backup_results_master_summary = st.session_state.results_master_summary
+    st.session_state.backup_results_text_summary = st.session_state.results_text_summary
+    st.session_state.backup_results_single_file_name = st.session_state.results_single_file_name
+
+    st.session_state.results_website_summary = None
+    st.session_state.results_df = pd.DataFrame()
+    st.session_state.results_master_summary = None
+    st.session_state.results_text_summary = None
 
     article_text = extract_text_from_url(url)
 
@@ -119,16 +124,6 @@ def summarize_website(url: str, model_settings: ModelSettings, prompt_settings: 
             
 def summarize_files(files, model_settings: ModelSettings, prompt_settings: PromptSettings):
 
-    st.session_state.backup_results_website_summary = st.session_state.results_website_summary
-    st.session_state.backup_results_df = st.session_state.results_df.copy(deep=True)
-    st.session_state.backup_results_master_summary = st.session_state.results_master_summary
-    st.session_state.backup_results_text_summary = st.session_state.results_text_summary
-
-    st.session_state.results_website_summary = None
-    st.session_state.results_df = pd.DataFrame()
-    st.session_state.results_master_summary = None
-    st.session_state.results_text_summary = None
-
     progress_col1, progress_col2 = st.columns([0.80,0.20])
 
     with progress_col1:
@@ -140,8 +135,20 @@ def summarize_files(files, model_settings: ModelSettings, prompt_settings: Promp
             st.session_state.results_df = st.session_state.backup_results_df
             st.session_state.results_master_summary = st.session_state.backup_results_master_summary
             st.session_state.results_text_summary = st.session_state.backup_results_text_summary
+            st.session_state.results_single_file_name = st.session_state.backup_results_single_file_name
             st.session_state.error_toast = ToastType.CANCEL
             st.rerun()
+
+    st.session_state.backup_results_website_summary = st.session_state.results_website_summary
+    st.session_state.backup_results_df = st.session_state.results_df.copy(deep=True)
+    st.session_state.backup_results_master_summary = st.session_state.results_master_summary
+    st.session_state.backup_results_text_summary = st.session_state.results_text_summary
+    st.session_state.backup_results_single_file_name = st.session_state.results_single_file_name
+
+    st.session_state.results_website_summary = None
+    st.session_state.results_df = pd.DataFrame()
+    st.session_state.results_master_summary = None
+    st.session_state.results_text_summary = None
 
     file_count = len(files)
     files_data = []
@@ -150,9 +157,10 @@ def summarize_files(files, model_settings: ModelSettings, prompt_settings: Promp
     if file_count == 1:
         st.session_state.enable_individual = False
         st.session_state.enable_master = True
+        st.session_state.backup_results_single_file_name = st.session_state.results_single_file_name
 
     progress_steps = file_count
-    progress = 0
+    progress = 0.0
 
     if st.session_state.enable_individual:
         progress_steps += file_count
@@ -169,6 +177,11 @@ def summarize_files(files, model_settings: ModelSettings, prompt_settings: Promp
         except Exception as e:
             st.error(str(e))
             st.stop()
+
+        if file_count == 1:
+            st.session_state.results_single_file_name, ext = os.path.splitext(meta["filename"])
+        else:
+            st.session_state.results_single_file_name = None
         
         master_summary_prompt += f"#{idx} {meta['filename']}:\n{text}\n\n"
 

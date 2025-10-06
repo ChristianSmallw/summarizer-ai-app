@@ -17,10 +17,13 @@ def init_session_state() -> None:
     st.session_state.setdefault("results_website_summary", None)
     st.session_state.setdefault("results_master_summary", None)
     st.session_state.setdefault("results_text_summary", None)
+    st.session_state.setdefault("results_single_file_name", None)
+
     st.session_state.setdefault("backup_results_df", pd.DataFrame())
     st.session_state.setdefault("backup_results_website_summary", None)
     st.session_state.setdefault("backup_results_master_summary", None)
     st.session_state.setdefault("backup_results_text_summary", None)
+    st.session_state.setdefault("backup_results_single_file_name", None)
 
     st.session_state.setdefault("enable_individual", True)
     st.session_state.setdefault("enable_master", False)

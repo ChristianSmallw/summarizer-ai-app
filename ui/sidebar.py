@@ -6,7 +6,16 @@ from ui.state import busy, on_chunk_change, refresh_chunking_defaults
 
 def render_sidebar() -> ModelSettings:
     with st.sidebar:
-        st.title("֎ AI Summarizer")
+        #st.title("֎ AI Summarizer")
+        st.markdown(
+            """
+            <h1 style='text-align: center; margin-top: -40px; margin-bottom: 20px; font-size: 30px;'>
+                ֎ AI Summarizer
+            </h1>
+            <hr style='border-width: 3px; background-color: #A9A9A9;'/>
+            """,
+            unsafe_allow_html=True
+        )
         st.header("🔧 Model Settings", divider="grey") 
         use_local = st.toggle("Use local models?", disabled=busy())
         selected_models = OPENAI_MODELS if not use_local else LOCAL_MODELS

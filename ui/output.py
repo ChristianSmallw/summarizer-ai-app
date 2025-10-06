@@ -95,14 +95,15 @@ def display_summary_df():
     else:
         st.info("Click a row to view its full summary.")
 
-def display_master_summary():
-    st.subheader("📝 Overall Summary")
+def display_master_summary(single_file_name: str = None):
+    st.subheader(f"📝 {'File' if single_file_name else 'Master'} Summary")
+    is_single_file = single_file_name is not None
     st.write(st.session_state.results_master_summary)
     st.download_button(
-    "⬇️ Download Overall Summary",
+    f"⬇️ Download {'Master ' if not is_single_file else 'File '}Summary",
     (st.session_state.results_master_summary or "").encode("utf-8"),
-    file_name=f"OVERALL_SUMMARY.txt",
+    file_name=f"Master_Summary.txt" if not is_single_file else f"{single_file_name}_summary.txt",
     width='stretch',
-    key=f"dl_overall_summary",
+    key=f"dl_master_summary",
     disabled=busy()
     )
