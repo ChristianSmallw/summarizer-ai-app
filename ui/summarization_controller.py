@@ -234,7 +234,7 @@ def summarize_files(files, model_settings: ModelSettings, prompt_settings: Promp
                                                                      prompt=build_prompt("Overall", prompt_settings))
 
         progress += 1
-        progress_bar.progress(progress / progress_steps, text="Overall summary complete")
+        progress_bar.progress(progress / progress_steps, text="Master summary complete")
 
     progress_bar.progress(1.0, text="✅ Done")
     st.toast(f"✅ Finished Summarizing all {file_count} files.")
