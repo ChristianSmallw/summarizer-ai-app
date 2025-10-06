@@ -28,10 +28,16 @@ def render_prompt_controls(section: str) -> PromptSettings:
                                         key=f"{section}_focus_tags",
                                         disabled=busy()
                                         )
+        language      = st.selectbox("Language", 
+                                     ["Auto","English","Spanish","French","German"],
+                                        key=f"{section}_language",
+                                        disabled=busy()
+                                    )
 
     return PromptSettings(
         summary_length=summary_length,
         format_choice=format_choice,
         tone_choice=tone_choice,
-        focus_tags=focus_tags
+        focus_tags=focus_tags,
+        language=language
     )

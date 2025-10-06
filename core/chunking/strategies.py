@@ -23,7 +23,8 @@ def summarize_in_chunks(
                               prompt_settings.summary_length, 
                               prompt_settings.format_choice, 
                               prompt_settings.tone_choice, 
-                              prompt_settings.focus_tags)
+                              prompt_settings.focus_tags,
+                              prompt_settings.language)
 
     # MAP
     per_chunk = []
@@ -52,7 +53,9 @@ def summarize_in_chunks(
                               prompt_settings.summary_length, 
                               prompt_settings.format_choice, 
                               prompt_settings.tone_choice, 
-                              prompt_settings.focus_tags)
+                              prompt_settings.focus_tags,
+                              prompt_settings.language)
+    
     combined = "\n\n".join(f"- Chunk {i+1}:\n{cs}" for i, cs in enumerate(per_chunk))
     payload = f"Combine these chunk summaries into a cohesive overall summary:\n\n{combined}\n"
     return summarize_text(payload, model_settings.model_name, model_settings.use_local, reduce_prompt)

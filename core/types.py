@@ -33,3 +33,4 @@ class PromptSettings:
     format_choice: str 
     tone_choice: str 
     focus_tags: list[str]
+    language: str

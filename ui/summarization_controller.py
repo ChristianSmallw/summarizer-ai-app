@@ -48,7 +48,8 @@ def summarize_website(url: str, model_settings: ModelSettings, prompt_settings: 
                         prompt_settings.summary_length, 
                         prompt_settings.format_choice, 
                         prompt_settings.tone_choice, 
-                        prompt_settings.focus_tags)
+                        prompt_settings.focus_tags,
+                        prompt_settings.language)
 
             summary = summarize_text(article_text, 
                                      model_settings.model_name, 
@@ -136,7 +137,8 @@ def summarize_files(files, model_settings: ModelSettings, prompt_settings: Promp
                                       prompt_settings.summary_length, 
                                       prompt_settings.format_choice, 
                                       prompt_settings.tone_choice, 
-                                      prompt_settings.focus_tags)
+                                      prompt_settings.focus_tags,
+                                      prompt_settings.language)
 
                 summary = summarize_text(text, 
                                          model_settings.model_name, 
@@ -171,7 +173,8 @@ def summarize_files(files, model_settings: ModelSettings, prompt_settings: Promp
                                   prompt_settings.summary_length, 
                                   prompt_settings.format_choice, 
                                   prompt_settings.tone_choice, 
-                                  prompt_settings.focus_tags)
+                                  prompt_settings.focus_tags,
+                                  prompt_settings.language)
 
             st.session_state.results_master_summary = summarize_text(master_summary_prompt, 
                                                                      model_settings.model_name, 

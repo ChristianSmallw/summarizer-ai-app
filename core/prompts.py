@@ -31,10 +31,11 @@ def _summary_type(type:str) -> str:
         "Overall": "Give a overall summary for the following file content in "
     }[type]
 
-def build_prompt(type:str, length_choice:str, format_choice:str, tone_choice:str, focus_tags: list[str]) -> str:
+def build_prompt(type:str, length_choice:str, format_choice:str, tone_choice:str, focus_tags: list[str], language: str) -> str:
     return f"""
     {_summary_type(type)} {_length_instr(length_choice)}.
-    {_format_instr(format_choice)} {_tone_instr(tone_choice)} {_focus_instr(focus_tags)}
+    {_format_instr(format_choice)} {_tone_instr(tone_choice)} {_focus_instr(focus_tags)}.
+    Language: {language}. If 'Auto', detect language and respond in the same language.
 
     Content:
     """

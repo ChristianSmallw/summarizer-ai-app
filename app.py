@@ -1,11 +1,10 @@
 import streamlit as st
 from ui.sidebar import render_sidebar
 from ui.prompt_controls import render_prompt_controls
-from core.types import ModelSettings, ErrorSection, ToastType
 from ui.state import init_session_state, busy, push_error, display_error, clear_error, display_toast
 from ui.summarization_controller import summarize_website, summarize_files
 from ui.output import display_website_summary, display_summary_df, display_master_summary
-import os
+from core.types import ErrorSection
 
 #Initialize default values for all session state keys
 init_session_state()
@@ -14,7 +13,7 @@ init_session_state()
 
 st.set_page_config(page_title="🤖 AI Summarizer", layout="wide")
 
-container_height = 800
+container_height = 675
 
 # Sidebar AI Model and chunking options
 sidebar_settings = render_sidebar()
@@ -44,7 +43,7 @@ with file_tab:
     file_count = len(files)
 
 
-    prompt_settings = render_prompt_controls("file")
+    file_prompt_settings = render_prompt_controls("file")
 
     with st.container(horizontal=True):
         file_summarize_btn = st.button(f"Summarize File" + ("s" if file_count > 1 else ""), disabled=(file_count == 0) or busy())
@@ -69,7 +68,7 @@ with file_tab:
 with url_tab:
     url = st.text_input(label="Enter URL:", disabled=busy())
 
-    prompt_settings = render_prompt_controls("url")
+    url_prompt_settings = render_prompt_controls("url")
     
     url_summarize_btn = st.button("Summarize Website", disabled=busy())
     display_error(ErrorSection.URL)
@@ -127,7 +126,7 @@ display_toast()
 if st.session_state.busy_file:
     with file_tab:
         try:
-            summarize_files(files, sidebar_settings, prompt_settings)
+            summarize_files(files, sidebar_settings, file_prompt_settings)
         except Exception as e:
             push_error(f"Failed while summarizing files.", ErrorSection.FILE, e)
         finally:
@@ -136,7 +135,7 @@ if st.session_state.busy_file:
 elif st.session_state.busy_web:
     with url_tab:
         try:
-            st.session_state.results_website_summary = summarize_website(url, sidebar_settings, prompt_settings)
+            st.session_state.results_website_summary = summarize_website(url, sidebar_settings, url_prompt_settings)
         except Exception as e:
             push_error(f"Failed while summarizing website.", ErrorSection.URL, e)
         finally:
