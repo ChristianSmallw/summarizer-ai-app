@@ -9,7 +9,7 @@ def render_sidebar() -> ModelSettings:
         #st.title("֎ AI Summarizer")
         st.markdown(
             """
-            <h1 style='text-align: center; margin-top: -40px; margin-bottom: 20px; font-size: 30px;'>
+            <h1 style='text-align: center; margin-top: -40px; margin-bottom: 20px; font-size: 28px;'>
                 ֎ AI Summarizer
             </h1>
             <hr style='border-width: 3px; background-color: #A9A9A9;'/>
