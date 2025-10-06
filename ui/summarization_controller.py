@@ -218,7 +218,7 @@ def summarize_files(files, model_settings: ModelSettings, prompt_settings: Promp
             progress_bar.progress(progress / progress_steps, text=f"{idx}/{file_count} · {file.name} — Summarized")
 
     if st.session_state.enable_master:
-        progress_bar.progress(progress / progress_steps, text=f"Building {'overall ' if not file_count == 1 else ''}summary…")
+        progress_bar.progress(progress / progress_steps, text=f"Building {'master ' if not file_count == 1 else ''}summary…")
                     
         use_chunking = should_chunk(len(master_summary_prompt), model_settings.chunk_size)
 
