@@ -23,6 +23,9 @@ class ToastType(Enum):
 class ModelSettings:
     use_local: bool
     model_name: str
+    temperature: float
+    reasoning: str
+    verbosity: str
     chunk_size: int
     overlap: int
     strategy: str

@@ -1,3 +1,5 @@
+from core.types import PromptSettings
+
 def _length_instr(choice: str) -> str:
     """Function to determine prompt length from a select box"""
     if choice.startswith("Short"): return "2–3 sentences"
@@ -31,11 +33,11 @@ def _summary_type(type:str) -> str:
         "Overall": "Give a overall summary for the following file content in "
     }[type]
 
-def build_prompt(type:str, length_choice:str, format_choice:str, tone_choice:str, focus_tags: list[str], language: str) -> str:
+def build_prompt(type:str, prompt_settings: PromptSettings) -> str:
     return f"""
-    {_summary_type(type)} {_length_instr(length_choice)}.
-    {_format_instr(format_choice)} {_tone_instr(tone_choice)} {_focus_instr(focus_tags)}.
-    Language: {language}. If 'Auto', detect language and respond in the same language.
+    {_summary_type(type)} {_length_instr(prompt_settings.summary_length)}.
+    {_format_instr(prompt_settings.format_choice)} {_tone_instr(prompt_settings.tone_choice)} {_focus_instr(prompt_settings.focus_tags)}.
+    Language: {prompt_settings.language}. If 'Auto', detect language and respond in the same language.
 
     Content:
     """

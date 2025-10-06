@@ -16,6 +16,11 @@ def render_prompt_controls(section: str) -> PromptSettings:
                                     key=f"{section}_tone_choice",
                                     disabled=busy()
                                     )
+        language    = st.selectbox("Language", 
+                                     ["Auto","English","Spanish","French","German"],
+                                        key=f"{section}_language",
+                                        disabled=busy()
+                                    )
     with st.container(horizontal=True):
         format_choice = st.selectbox("Format", 
                                      ["Paragraphs","Bullets","Headings + bullets","Q&A","Table (when possible)"],
@@ -28,11 +33,6 @@ def render_prompt_controls(section: str) -> PromptSettings:
                                         key=f"{section}_focus_tags",
                                         disabled=busy()
                                         )
-        language      = st.selectbox("Language", 
-                                     ["Auto","English","Spanish","French","German"],
-                                        key=f"{section}_language",
-                                        disabled=busy()
-                                    )
 
     return PromptSettings(
         summary_length=summary_length,

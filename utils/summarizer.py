@@ -2,6 +2,7 @@ import os
 import requests
 from bs4 import BeautifulSoup
 from openai import OpenAI
+from core.types import ModelSettings
 from utils.config import get_secret
 import re
 from ftfy import fix_text
@@ -44,19 +45,29 @@ def strip_thinking(text: str) -> str:
     return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
 
 
-def summarize_text(text, model_name, is_local, prompt="Summarize this:"):
-    temp = 1 if model_name.startswith("gpt-5") else 0.2
+def summarize_text(text: str, model_settings: ModelSettings, prompt="Summarize this:"):
+
+    #if model_settings.model_name.startswith("gpt-5"): model_settings.temperature = 1
     text = fix_text(text)
 
-    if not is_local:
-        response = client.responses.create(
-            model=model_name,
-            #model="qwen3:32b",
-            instructions="You are an assistant that analyzes text and provides a summary, ignoring text that might be navigation related.",
-            input=f"{prompt}\n\n{text}",
-            temperature=temp
-        )
-        return response.output_text
+    if not model_settings.use_local:
+        if model_settings.model_name.startswith("gpt-5"):
+            response = client.responses.create(
+                model=model_settings.model_name,
+                instructions="You are an assistant that analyzes text and provides a summary, ignoring text that might be navigation related.",
+                input=f"{prompt}\n\n{text}",
+                reasoning={ "effort": model_settings.reasoning },
+                text={ "verbosity": model_settings.verbosity },
+            )
+            return response.output_text
+        else:
+            response = client.responses.create(
+                model=model_settings.model_name,
+                instructions="You are an assistant that analyzes text and provides a summary, ignoring text that might be navigation related.",
+                input=f"{prompt}\n\n{text}",
+                temperature=model_settings.temperature
+            )
+            return response.output_text
     else:
         r = requests.post(
             "https://reese-shingly-johnetta.ngrok-free.dev/summarize",
@@ -64,8 +75,8 @@ def summarize_text(text, model_name, is_local, prompt="Summarize this:"):
                 "text": text,
                 "prompt": prompt,
                 "max_tokens": 0,
-                "model": model_name,
-                "temperature": 0.2
+                "model": model_settings.model_name,
+                "temperature": model_settings.temperature
             },
             timeout=600
         )

@@ -44,17 +44,9 @@ def summarize_website(url: str, model_settings: ModelSettings, prompt_settings: 
                 prompt_settings=prompt_settings
             )
         else:
-            prompt = build_prompt("Individual", 
-                        prompt_settings.summary_length, 
-                        prompt_settings.format_choice, 
-                        prompt_settings.tone_choice, 
-                        prompt_settings.focus_tags,
-                        prompt_settings.language)
-
             summary = summarize_text(article_text, 
-                                     model_settings.model_name, 
-                                     model_settings.use_local, 
-                                     prompt=prompt)
+                                     model_settings=model_settings, 
+                                     prompt=build_prompt("Individual", prompt_settings))
 
         st.session_state.busy_web = False
         st.session_state.error_toast = ToastType.SUCCESS
@@ -133,17 +125,9 @@ def summarize_files(files, model_settings: ModelSettings, prompt_settings: Promp
                     prompt_settings=prompt_settings
                 )
             else:
-                prompt = build_prompt("Individual", 
-                                      prompt_settings.summary_length, 
-                                      prompt_settings.format_choice, 
-                                      prompt_settings.tone_choice, 
-                                      prompt_settings.focus_tags,
-                                      prompt_settings.language)
-
-                summary = summarize_text(text, 
-                                         model_settings.model_name, 
-                                         model_settings.use_local, 
-                                         prompt=prompt)
+                summary = summarize_text(text,
+                                         model_settings=model_settings,
+                                         prompt=build_prompt("Individual", prompt_settings))
 
             files_data.append({
                 "file": meta["filename"],
@@ -169,17 +153,9 @@ def summarize_files(files, model_settings: ModelSettings, prompt_settings: Promp
                 prompt_settings=prompt_settings
             )
         else:
-            prompt = build_prompt("Individual", 
-                                  prompt_settings.summary_length, 
-                                  prompt_settings.format_choice, 
-                                  prompt_settings.tone_choice, 
-                                  prompt_settings.focus_tags,
-                                  prompt_settings.language)
-
             st.session_state.results_master_summary = summarize_text(master_summary_prompt, 
-                                                                     model_settings.model_name, 
-                                                                     model_settings.use_local, 
-                                                                     prompt=prompt)
+                                                                     model_settings=model_settings,
+                                                                     prompt=build_prompt("Overall", prompt_settings))
 
         progress += 1
         progress_bar.progress(progress / progress_steps, text="Overall summary complete")

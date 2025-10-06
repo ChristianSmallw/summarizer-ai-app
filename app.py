@@ -11,9 +11,9 @@ init_session_state()
 
 # UI interface
 
-st.set_page_config(page_title="🤖 AI Summarizer", layout="wide")
+st.set_page_config(page_title="֎ AI Summarizer", layout="wide")
 
-container_height = 675
+container_height = 725
 
 # Sidebar AI Model and chunking options
 sidebar_settings = render_sidebar()
@@ -22,7 +22,7 @@ sidebar_settings = render_sidebar()
 main = st.container(horizontal_alignment="center")
 
 with main:
-    st.title("🤖 AI Summarizer", width=355) 
+    #st.title("֎ AI Summarizer", width=355) 
     col_main1, col_main2 = st.columns(2, width=1500)
 
 with col_main1:
@@ -128,7 +128,9 @@ if st.session_state.busy_file:
         try:
             summarize_files(files, sidebar_settings, file_prompt_settings)
         except Exception as e:
-            push_error(f"Failed while summarizing files.", ErrorSection.FILE, e)
+            push_error(f"Failed while summarizing files." + 
+                       " The local model API is likely offline, please try again later." if sidebar_settings.use_local else "",
+                        ErrorSection.FILE, e)
         finally:
             st.session_state.busy_file = False
             st.rerun()
@@ -137,7 +139,9 @@ elif st.session_state.busy_web:
         try:
             st.session_state.results_website_summary = summarize_website(url, sidebar_settings, url_prompt_settings)
         except Exception as e:
-            push_error(f"Failed while summarizing website.", ErrorSection.URL, e)
+            push_error(f"Failed while summarizing website." + 
+                       " The local model API is likely offline, please try again later." if sidebar_settings.use_local else "",
+                       ErrorSection.URL, e)
         finally:
             st.session_state.busy_web = False
             st.rerun()

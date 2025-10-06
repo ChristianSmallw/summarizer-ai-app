@@ -19,18 +19,13 @@ def summarize_in_chunks(
         return ""
 
     n = len(chunks)
-    map_prompt = build_prompt("Individual", 
-                              prompt_settings.summary_length, 
-                              prompt_settings.format_choice, 
-                              prompt_settings.tone_choice, 
-                              prompt_settings.focus_tags,
-                              prompt_settings.language)
+    map_prompt = build_prompt("Individual", prompt_settings)
 
     # MAP
     per_chunk = []
     for i, ch in enumerate(chunks, start=1):
         p = f"{map_prompt}\nYou are summarizing CHUNK {i}/{n}. Make it standalone and factual."
-        s = summarize_text(ch, model_settings.model_name, model_settings.use_local, p)
+        s = summarize_text(ch, model_settings, p)
         per_chunk.append(s)
 
     if model_settings.strategy == "map-only":
@@ -45,17 +40,12 @@ def summarize_in_chunks(
             )
             refine_prompt = f"{map_prompt}\n{refine_instr}"
             payload = f"Current cumulative summary:\n{running}\n\nNew chunk summary ({i}/{n}):\n{s}"
-            running = summarize_text(payload, model_settings.model_name, model_settings.use_local, refine_prompt)
+            running = summarize_text(payload, model_settings, refine_prompt)
         return running
 
     # map-reduce (default)
-    reduce_prompt = build_prompt("Overall", 
-                              prompt_settings.summary_length, 
-                              prompt_settings.format_choice, 
-                              prompt_settings.tone_choice, 
-                              prompt_settings.focus_tags,
-                              prompt_settings.language)
+    reduce_prompt = build_prompt("Overall", prompt_settings)
     
     combined = "\n\n".join(f"- Chunk {i+1}:\n{cs}" for i, cs in enumerate(per_chunk))
     payload = f"Combine these chunk summaries into a cohesive overall summary:\n\n{combined}\n"
-    return summarize_text(payload, model_settings.model_name, model_settings.use_local, reduce_prompt)
+    return summarize_text(payload, model_settings, reduce_prompt)

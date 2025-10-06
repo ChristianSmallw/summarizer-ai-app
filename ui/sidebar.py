@@ -6,7 +6,8 @@ from ui.state import busy, on_chunk_change, refresh_chunking_defaults
 
 def render_sidebar() -> ModelSettings:
     with st.sidebar:
-        st.title("⚙️ AI Settings") 
+        st.title("֎ AI Summarizer")
+        st.header("🔧 Model Settings", divider="grey") 
         use_local = st.toggle("Use local models?", disabled=busy())
         selected_models = OPENAI_MODELS if not use_local else LOCAL_MODELS
         model_name = st.selectbox(
@@ -16,6 +17,30 @@ def render_sidebar() -> ModelSettings:
                                 disabled=busy()
                             )
         
+        reasoning = ""
+        verbosity = ""
+        temperature = 1.0
+        if model_name.startswith("gpt-5"):
+            reasoning = st.selectbox(
+                        "Reasoning",
+                        options=["Minimal", "Low", "Medium", "High"],
+                        index=1,
+                        key="reasoning",
+                        help="Higher reasoning increases the model's ability to understand and process complex information",
+                        disabled=busy()
+                    ).lower()
+            verbosity = st.selectbox(
+                        "Verbosity",
+                        options=["Low", "Medium", "High"],
+                        key="verbosity",
+                        help="Verbosity determines how many output tokens are generated.",
+                        disabled=busy()
+                    ).lower()
+        else:
+            temperature = st.slider("Temperature", 0.0, 1.0, 0.2,
+                        key="temperature",
+                        disabled=busy())
+        
             # When model changes, refresh defaults once (but allow user overrides after)
         
 
@@ -23,6 +48,8 @@ def render_sidebar() -> ModelSettings:
         if model_name != st.session_state.get("_last_model", None):
             refresh_chunking_defaults(selected_models)
         st.session_state._last_model = model_name
+
+        st.header("🧱 Chunk Settings", divider="grey") 
 
         chunk_size = st.slider(
             "Chunk size (tokens)",
@@ -60,6 +87,9 @@ def render_sidebar() -> ModelSettings:
         return ModelSettings(
             use_local=use_local,
             model_name=model_name,
+            temperature=temperature,
+            reasoning=reasoning,
+            verbosity=verbosity,
             chunk_size=chunk_size,
             overlap=overlap,
             strategy=strategy,
