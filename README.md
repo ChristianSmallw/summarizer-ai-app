@@ -29,8 +29,18 @@ A **Streamlit app** that uses local or cloud AI models to summarize batch docume
 git clone https://github.com/ChristianSmallw/summarizer-ai-app.git
 cd summarizer-ai-app
 
-# 2. Install dependencies
+# 2. (Optional but recommended) Create a virtual environment
+python -m venv venv
+venv\Scripts\activate   # On Windows
+# or
+source venv/bin/activate  # On macOS/Linux
+
+# 3. Install dependencies
 pip install -r requirements.txt
 
-# 3. Run Streamlit app
+# 4. Create a .env file in the project root and add your OpenAI API key
+# Example:
+echo OPENAI_API_KEY=your_openai_api_key_here > .env
+
+# 5. Run Streamlit app
 streamlit run app.py
