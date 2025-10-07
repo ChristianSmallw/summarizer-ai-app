@@ -8,7 +8,9 @@ import re
 from ftfy import fix_text
 
 OPENAI_API_KEY = get_secret("OPENAI_API_KEY")
-# OLLAMA_API = "http://localhost:11434/api/chat"
+LOCAL_API_URL = get_secret("LOCAL_API_URL")
+LOCAL_API_SECRET = get_secret("LOCAL_API_KEY")
+
 client = OpenAI(api_key=OPENAI_API_KEY)
 ollama_client = OpenAI(
     base_url="http://localhost:11434/v1",
@@ -77,7 +79,8 @@ def summarize_text(text: str, model_settings: ModelSettings, prompt="Summarize t
             return response.output_text
     else:
         r = requests.post(
-            "https://reese-shingly-johnetta.ngrok-free.dev/summarize",
+            LOCAL_API_URL,
+            headers={"Authorization": f"Bearer {LOCAL_API_SECRET}"},
             json={
                 "instructions": instructions,
                 "text": text,
