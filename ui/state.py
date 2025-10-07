@@ -82,6 +82,4 @@ def display_toast():
             st.toast(f"Something went wrong...", icon="🤔")
         case ToastType.CANCEL:
             st.toast(f"Operation cancelled.", icon="✋")
-        case ToastType.COPY:
-            st.toast(f"Copied to clipboard!", icon="📋")
     st.session_state.error_toast = ToastType.NONE

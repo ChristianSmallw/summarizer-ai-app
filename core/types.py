@@ -16,9 +16,8 @@ class ErrorSection(Enum):
 class ToastType(Enum):
     NONE = 0
     SUCCESS = 1
-    COPY = 2
-    ERROR = 3
-    CANCEL = 4
+    ERROR = 2
+    CANCEL = 3
 
 
 @dataclass
