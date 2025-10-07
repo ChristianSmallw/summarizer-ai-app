@@ -45,7 +45,7 @@ def init_session_state() -> None:
 
 def busy() -> bool:
     """Function to determine if the app should be in a 'in progress' state"""
-    return st.session_state.busy_file or st.session_state.busy_web
+    return st.session_state.busy_file or st.session_state.busy_web or st.session_state.busy_text
 
 def refresh_chunking_defaults(selected_models):
     st.session_state.chunk_size = default_chunk_size_for(st.session_state.model_name, selected_models)
