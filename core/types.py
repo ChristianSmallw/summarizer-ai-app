@@ -38,3 +38,7 @@ class PromptSettings:
     tone_choice: str 
     focus_tags: list[str]
     language: str
+    include_sections: list[str]
+    critique_style: str
+    evidence_mode: str
+    critique_confidence: int
