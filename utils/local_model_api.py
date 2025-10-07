@@ -17,11 +17,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def _summarize(text, model_name, temp, prompt="Summarize this:"):
+def _summarize(instructions, text, model_name, temp, prompt="Summarize this:"):
     response = client.chat.completions.create(
         model=model_name,
         messages=[
-            {"role": "system", "content": "You are an assistant that analyzes text and provides a summary, ignoring text that might be navigation related."},
+            {"role": "system", "content": instructions},
             {"role": "user", "content": f"{prompt}\n\n{text}"}
         ],
         
@@ -30,11 +30,12 @@ def _summarize(text, model_name, temp, prompt="Summarize this:"):
     return response.choices[0].message.content
 
 class SumReq(BaseModel):
+    instructions: str
     text: str
     prompt: str
     max_tokens: int = 512
-    model: str = "qwen3:32b"  # example; change to what you run
-    temperature: float = 0.2
+    model: str
+    temperature: float
 
 @app.get("/health")
 def health():
@@ -47,7 +48,7 @@ def summarize(req: SumReq):
         raise HTTPException(400, "text too short")
 
     try:
-        out = _summarize(req.text, req.model, req.temperature, req.prompt)
+        out = _summarize(req.instructions, req.text, req.model, req.temperature, req.prompt)
     except Exception as e:
         raise HTTPException(500, f"backend error: {e}")
     return {"summary": out}

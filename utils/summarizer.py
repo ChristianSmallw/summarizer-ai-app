@@ -18,6 +18,14 @@ headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
 }
 
+instructions = (
+    "You are an analytical text assistant. "
+    "Your role is to read and process input text, then produce a clear and well-structured output "
+    "based on the user’s requested style (summary, critique, suggestions, risks, etc.). "
+    "Do not include any conversational remarks, follow-up questions, mentions of chunk summaries or closing statements. "
+    "Only return the summary and analysis itself."
+)
+
 def extract_text_from_url(url):
     try:
         response = requests.get(url, headers=headers, timeout=100)
@@ -47,14 +55,13 @@ def strip_thinking(text: str) -> str:
 
 def summarize_text(text: str, model_settings: ModelSettings, prompt="Summarize this:"):
 
-    #if model_settings.model_name.startswith("gpt-5"): model_settings.temperature = 1
     text = fix_text(text)
 
     if not model_settings.use_local:
         if model_settings.model_name.startswith("gpt-5"):
             response = client.responses.create(
                 model=model_settings.model_name,
-                instructions="You are an assistant that analyzes text and provides a summary, ignoring text that might be navigation related.",
+                instructions=instructions,
                 input=f"{prompt}\n\n{text}",
                 reasoning={ "effort": model_settings.reasoning },
                 text={ "verbosity": model_settings.verbosity },
@@ -63,7 +70,7 @@ def summarize_text(text: str, model_settings: ModelSettings, prompt="Summarize t
         else:
             response = client.responses.create(
                 model=model_settings.model_name,
-                instructions="You are an assistant that analyzes text and provides a summary, ignoring text that might be navigation related.",
+                instructions=instructions,
                 input=f"{prompt}\n\n{text}",
                 temperature=model_settings.temperature
             )
@@ -72,6 +79,7 @@ def summarize_text(text: str, model_settings: ModelSettings, prompt="Summarize t
         r = requests.post(
             "https://reese-shingly-johnetta.ngrok-free.dev/summarize",
             json={
+                "instructions": instructions,
                 "text": text,
                 "prompt": prompt,
                 "max_tokens": 0,

@@ -39,6 +39,7 @@ class PromptSettings:
     focus_tags: list[str]
     language: str
     include_sections: list[str]
+    use_in_response: list[str]
     critique_style: str
     evidence_mode: str
     critique_confidence: int

@@ -12,7 +12,8 @@ def _format_instr(fmt:str) -> str:
         "Paragraphs": "Use clear paragraphs.",
         "Headings + bullets": "Use section headings followed by bullet points.",
         "Q&A": "Answer as Q&A pairs.",
-        "Table (when possible)": "If structure fits, produce a Markdown table."
+        "Tables": "If structure fits, produce a Markdown table.",
+        "Headings + bullets + table": "Use section headings followed by bullet points and tables where suitable."
     }[fmt]
 
 def _tone_instr(tone:str) -> str:
@@ -21,7 +22,8 @@ def _tone_instr(tone:str) -> str:
         "Executive":"Executive tone with key metrics.",
         "Technical":"Technical register; keep jargon where precise.",
         "Friendly":"Friendly, approachable.",
-        "Persuasive":"Persuasive with compelling language."
+        "Persuasive":"Persuasive with compelling language.",
+        "Humorous":"Light-hearted and humorous, but stay relevant and polite."
     }[tone]
 
 def _focus_instr(focus:list[str]) -> str:
@@ -85,7 +87,55 @@ def _build_include_instr(include, style, evidence, conf):
     if "Quality score" in include:
         parts.append("Add **Quality score** (1–5) for Clarity, Evidence, Structure with 1-line rationale each.")
 
-    return "\n".join(f"- {p}" for p in parts)
+    return "Also include the following sections if applicable:\n" + "\n".join(f"- {p}" for p in parts) if include else ""
+
+def build_response_style_instr(styles: list[str]) -> str:
+
+    parts = []
+
+    if "Markdown" in styles:
+        parts.append("Use Markdown formatting for readability.")
+    elif "Markdown" not in styles:
+        parts.append("Don't use markdown text formatting under any circumstance. Only plain text.")
+
+    if "Emojis for tone / emphasis" in styles:
+        parts.append("Add emojis to convey tone or emphasis.")
+
+    if "Code blocks (for examples)" in styles:
+        parts.append("Show code snippets in Markdown code blocks when relevant.")
+
+    if "Numbered steps" in styles:
+        parts.append("Use numbered lists for step-by-step instructions.")
+
+    if "Concise sentences" in styles:
+        parts.append("Keep sentences concise and direct.")
+
+    if "Expanded explanations" in styles:
+        parts.append("Add brief explanations for each point to aid understanding.")
+
+    if "Include TL;DR summary" in styles:
+        parts.append("Start with a TL;DR section summarizing the key message in 1–2 lines.")
+
+    if "Add call-to-action" in styles:
+        parts.append("End with a motivating or actionable takeaway.")
+
+    if "Highlight key words" in styles:
+        parts.append("Bold important terms or phrases to guide scanning.")
+
+    if "Italicize technical terms" in styles:
+        parts.append("Italicize specialized or domain-specific terms for clarity.")
+
+    if "Estimated reading time" in styles:
+        parts.append("Add an estimated reading time at the beginning of the response.")
+
+    if "Add hashtags for style" in styles:
+        parts.append("Optionally include relevant hashtags at the end for social-post style.")
+
+    if "Include timestamp / date" in styles:
+        parts.append("Include the current date/time at the end of the summary.")
+
+    return "Formatting and response style guidelines:\n" + "\n".join(f"- {p}" for p in parts)
+
 
 def build_prompt(type:str, prompt_settings: PromptSettings) -> str:
     return f"""
@@ -93,11 +143,9 @@ def build_prompt(type:str, prompt_settings: PromptSettings) -> str:
     {_format_instr(prompt_settings.format_choice)} {_tone_instr(prompt_settings.tone_choice)} {_focus_instr(prompt_settings.focus_tags)}.
     Language: {prompt_settings.language}. If 'Auto', detect language and respond in the same language.
 
-    Also include the following sections if applicable:
-    {_build_include_instr(prompt_settings.include_sections, 
-                          prompt_settings.critique_style, 
-                          prompt_settings.evidence_mode, 
-                          prompt_settings.critique_confidence)}
+    {_build_include_instr(prompt_settings.include_sections, prompt_settings.critique_style, prompt_settings.evidence_mode, prompt_settings.critique_confidence)}
+
+    {build_response_style_instr(prompt_settings.use_in_response)}
 
     Content:
     """

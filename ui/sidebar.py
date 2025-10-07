@@ -30,17 +30,18 @@ def render_sidebar() -> ModelSettings:
         verbosity = ""
         temperature = 1.0
         if model_name.startswith("gpt-5"):
-            reasoning = st.selectbox(
+            reasoning = st.select_slider(
                         "Reasoning",
                         options=["Minimal", "Low", "Medium", "High"],
-                        index=1,
+                        value="Low",
                         key="reasoning",
                         help="Higher reasoning increases the model's ability to understand and process complex information",
                         disabled=busy()
                     ).lower()
-            verbosity = st.selectbox(
+            verbosity = st.select_slider(
                         "Verbosity",
                         options=["Low", "Medium", "High"],
+                        value="Medium",
                         key="verbosity",
                         help="Verbosity determines how many output tokens are generated.",
                         disabled=busy()
