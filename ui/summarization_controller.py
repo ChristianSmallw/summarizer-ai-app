@@ -94,7 +94,7 @@ def summarize_website(url: str, model_settings: ModelSettings, prompt_settings: 
 
     if not article_text:
         st.session_state.busy_web = False
-        push_error("Could not extract webpage content.", ErrorSection.URL)
+        push_error("No text could be extracted from the provided URL. Please check the URL and try again.", ErrorSection.URL)
     else:
 
         use_chunking = should_chunk(len(article_text), model_settings.chunk_size)

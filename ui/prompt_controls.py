@@ -28,7 +28,7 @@ def render_prompt_controls(section: str) -> PromptSettings:
                                     disabled=busy()
                                     )
         focus_tags = st.multiselect("Focus (optional)", 
-                                        ["Key points","Action items","Pros/Cons","Risks","Entities & facts","Numbers & metrics","Quotes", "Vibe"], 
+                                        ["Key points","Action items","Pros/Cons","Risks","Entities & facts","Numbers & metrics","Quotes", "Emotional texture", "Vibe"], 
                                         #default=["Key points","Action items"],
                                         key=f"{section}_focus_tags",
                                         disabled=busy()
