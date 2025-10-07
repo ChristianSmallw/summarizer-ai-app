@@ -1,32 +1,62 @@
 import streamlit as st
 from ui.state import busy
+from core.types import ToastType
 from io import BytesIO
 import zipfile
 import os
+import pyperclip as pc
 
 def display_website_summary():
-    st.subheader("📝 Website Summary")
+    summary_header_col1, summary_header_col2 = st.columns([0.45,0.55    ])
+
+    with summary_header_col1:
+        st.subheader("📝 Website Summary", width="content")
+    
+    with summary_header_col2:
+        summary_buttons_container = st.container(horizontal=True)
+
+    with summary_buttons_container:
+        if st.button("📋 Copy Summary", key="copy_website_summary", disabled=busy()):
+            pc.copy(st.session_state.results_website_summary or "")
+            st.session_state.error_toast = ToastType.COPY
+
+        st.download_button(
+        "⬇️ Download Summary",
+        (st.session_state.results_website_summary or "").encode("utf-8"),
+        file_name=f"website_summary.txt",
+        width='content',
+        key=f"dl_website_summary",
+        disabled=busy(),
+        )
+
     st.write(st.session_state.results_website_summary)
-    st.download_button(
-    "⬇️ Download Website Summary",
-    (st.session_state.results_website_summary or "").encode("utf-8"),
-    file_name=f"website_summary.txt",
-    width='stretch',
-    key=f"dl_website_summary",
-    disabled=busy(),
-    )
+
 
 def display_text_summary():
-    st.subheader("📝 Text Summary")
+    summary_header_col1, summary_header_col2 = st.columns([0.45,0.55    ])
+
+    with summary_header_col1:
+        st.subheader("📝 Text Summary")
+    
+    with summary_header_col2:
+        summary_buttons_container = st.container(horizontal=True)
+
+    with summary_buttons_container:
+        if st.button("📋 Copy Summary", key="copy_text_summary", disabled=busy()):
+            pc.copy(st.session_state.results_text_summary or "")
+            st.session_state.error_toast = ToastType.COPY
+
+        st.download_button(
+        "⬇️ Download Summary",
+        (st.session_state.results_text_summary or "").encode("utf-8"),
+        file_name=f"text_summary.txt",
+        width='content',
+        key=f"dl_text_summary",
+        disabled=busy(),
+        )
+    
     st.write(st.session_state.results_text_summary)
-    st.download_button(
-    "⬇️ Download Text Summary",
-    (st.session_state.results_text_summary or "").encode("utf-8"),
-    file_name=f"text_summary.txt",
-    width='stretch',
-    key=f"dl_text_summary",
-    disabled=busy(),
-    )
+
 
 def display_summary_df():
 
@@ -50,7 +80,8 @@ def display_summary_df():
                         file_name="summaries.zip", 
                         mime="application/zip",
                         width='stretch',
-                        disabled=busy())
+                        disabled=busy()
+                        )
 
     left, right = st.columns([0.12, 0.88])
     with left:
@@ -83,27 +114,46 @@ def display_summary_df():
         row = st.session_state.results_df.iloc[st.session_state.sel_idx]
         filename, ext = os.path.splitext(row["file"])
         with st.expander(f"Summary — {row['file']}", expanded=True):
+            with st.container(horizontal=True):
+                if st.button("📋 Copy Summary", key=f"copy_{filename}_summary", disabled=busy()):
+                    pc.copy(row["summary"] or "")
+                    st.session_state.error_toast = ToastType.COPY
+                
+                st.download_button(
+                "⬇️ Download Summary",
+                (row["summary"] or "").encode("utf-8"),
+                file_name=f"{filename}_summary.txt",
+                width='stretch',
+                key=f"dl_{filename}_summary",
+                disabled=busy()
+                )
+
             st.write(row["summary"])
-            st.download_button(
-            "⬇️ Download Summary",
-            (row["summary"] or "").encode("utf-8"),
-            file_name=f"{filename}_summary.txt",
-            width='stretch',
-            key=f"dl_{filename}_summary",
-            disabled=busy()
-    )
     else:
         st.info("Click a row to view its full summary.")
 
 def display_master_summary(single_file_name: str = None):
-    st.subheader(f"📝 {'File' if single_file_name else 'Master'} Summary")
+    summary_header_col1, summary_header_col2 = st.columns([0.45,0.55    ])
     is_single_file = single_file_name is not None
+
+    with summary_header_col1:
+        st.subheader(f"📝 {'File' if single_file_name else 'Master'} Summary", width="content")
+    
+    with summary_header_col2:
+        summary_buttons_container = st.container(horizontal=True)
+
+    with summary_buttons_container:
+        if st.button("📋 Copy Summary", key="copy_master_summary", disabled=busy()):
+            pc.copy(st.session_state.results_master_summary or "")
+            st.session_state.error_toast = ToastType.COPY
+
+        st.download_button(
+        f"⬇️ Download Summary",
+        (st.session_state.results_master_summary or "").encode("utf-8"),
+        file_name=f"Master_Summary.txt" if not is_single_file else f"{single_file_name}_summary.txt",
+        width='content',
+        key=f"dl_master_summary",
+        disabled=busy()
+        )
+        
     st.write(st.session_state.results_master_summary)
-    st.download_button(
-    f"⬇️ Download {'Master ' if not is_single_file else 'File '}Summary",
-    (st.session_state.results_master_summary or "").encode("utf-8"),
-    file_name=f"Master_Summary.txt" if not is_single_file else f"{single_file_name}_summary.txt",
-    width='stretch',
-    key=f"dl_master_summary",
-    disabled=busy()
-    )
