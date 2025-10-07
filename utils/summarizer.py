@@ -79,7 +79,7 @@ def summarize_text(text: str, model_settings: ModelSettings, prompt="Summarize t
             return response.output_text
     else:
         r = requests.post(
-            LOCAL_API_URL,
+            f"{LOCAL_API_URL}/summarize",
             headers={"Authorization": f"Bearer {LOCAL_API_SECRET}"},
             json={
                 "instructions": instructions,
