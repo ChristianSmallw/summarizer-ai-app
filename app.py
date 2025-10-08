@@ -120,25 +120,25 @@ with col_main2:
     if has_website_summary or has_individual or has_master or has_text_summary:
         with st.container(height=container_height, border=True):
             if has_website_summary:
-                (tab_web,) = st.tabs(["Website Summary"])
+                (tab_web,) = st.tabs(["📝 Website Summary"])
                 with tab_web:
                     display_website_summary()
             elif has_individual and has_master:
-                tab_individual, tab_master = st.tabs(["Individual Summaries", "Master Summary"])
+                tab_individual, tab_master = st.tabs(["📝 Individual Summaries", "📝 Master Summary"])
                 with tab_individual:
                     display_summary_df()
                 with tab_master:
                     display_master_summary()
             elif has_individual:
-                (tab_individual,) = st.tabs(["Individual Summaries"])
+                (tab_individual,) = st.tabs(["📝 Individual Summaries"])
                 with tab_individual:
                     display_summary_df()
             elif has_master:
-                (tab_master,) = st.tabs([f"Master Summary" if not st.session_state.results_single_file_name else "File Summary"])
+                (tab_master,) = st.tabs([f"📝 Master Summary" if not st.session_state.results_single_file_name else "📝 File Summary"])
                 with tab_master:
                     display_master_summary(st.session_state.results_single_file_name)
             elif has_text_summary:
-                (tab_text,) = st.tabs(["Text Summary"])
+                (tab_text,) = st.tabs(["📝 Text Summary"])
                 with tab_text:
                     display_text_summary()
     else:

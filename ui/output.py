@@ -1,6 +1,6 @@
 import streamlit as st
 from ui.state import busy
-from core.types import ToastType
+from st_copy import copy_button
 from io import BytesIO
 import zipfile
 import os
@@ -9,10 +9,16 @@ def display_website_summary():
     summary_header_col1, summary_header_col2 = st.columns([0.50,0.50    ])
 
     with summary_header_col1:
-        st.subheader("📝 Website Summary", width="content")
+        copy_button(st.session_state.results_website_summary or "",
+        key=F"copy_website_summary")
+        # st.subheader("📝 Website Summary", width="content")
+    
+
     
     with summary_header_col2:
         summary_buttons_container = st.container(horizontal=True, horizontal_alignment="right")
+
+        # summary_buttons_container = st.container(horizontal=True, horizontal_alignment="right")
 
     with summary_buttons_container:
         st.download_button(
@@ -23,9 +29,11 @@ def display_website_summary():
         key=f"dl_website_summary",
         disabled=busy(),
         )
+    # with summary_buttons_container:
 
-    with st.expander("📋 View and copy raw summary"):
-        st.code(st.session_state.results_website_summary or "", language=None)
+
+    # with st.expander("📋 View and copy raw summary"):
+    #     st.code(st.session_state.results_website_summary or "", language=None)
 
     st.write(st.session_state.results_website_summary)
 
@@ -34,7 +42,9 @@ def display_text_summary():
     summary_header_col1, summary_header_col2 = st.columns([0.50,0.50    ])
 
     with summary_header_col1:
-        st.subheader("📝 Text Summary")
+        copy_button(st.session_state.results_text_summary or "",
+        key=F"copy_text_summary")
+        #st.subheader("📝 Text Summary")
     
     with summary_header_col2:
         summary_buttons_container = st.container(horizontal=True, horizontal_alignment="right")
@@ -48,9 +58,6 @@ def display_text_summary():
         key=f"dl_text_summary",
         disabled=busy(),
         )
-
-    with st.expander("📋 View and copy raw summary"):
-        st.code(st.session_state.results_text_summary or "", language=None)
     
     st.write(st.session_state.results_text_summary)
 
@@ -115,8 +122,8 @@ def display_summary_df():
             summary_header_col1, summary_header_col2 = st.columns([0.50,0.50])
 
             with summary_header_col1:
-                with st.expander("📋 View and copy raw summary"):
-                    st.code(row["summary"] or "", language=None)
+                copy_button(row["summary"] or "",
+                key=f"copy_{filename}_summary")
 
             with summary_header_col2:
                 st.download_button(
@@ -134,11 +141,18 @@ def display_summary_df():
         st.info("Click a row to view its full summary.")
 
 def display_master_summary(single_file_name: str = None):
-    summary_header_col1, summary_header_col2 = st.columns([0.50,0.50])
+
     is_single_file = single_file_name is not None
 
+    if is_single_file:
+        st.subheader(f"{single_file_name} Summary", width="content")
+
+    summary_header_col1, summary_header_col2 = st.columns([0.50,0.50])
+
     with summary_header_col1:
-        st.subheader(f"📝 {'File' if single_file_name else 'Master'} Summary", width="content")
+        copy_button(st.session_state.results_master_summary or "", key=f"copy_master_summary")
+        
+    
     
     with summary_header_col2:
         summary_buttons_container = st.container(horizontal=True, horizontal_alignment="right")
@@ -152,9 +166,9 @@ def display_master_summary(single_file_name: str = None):
         key=f"dl_master_summary",
         disabled=busy()
         )
-    
-    with st.expander("📋 View and copy raw summary"):
-        st.code(st.session_state.results_master_summary or "", language=None)
+
 
     st.write(st.session_state.results_master_summary)
+
+
 
